@@ -11,7 +11,7 @@ SPI_InitTypeDef   SPI_InitStructure;
 #define SPIy_PIN_SCK           GPIO_Pin_5
 #define SPIy_PIN_MISO          GPIO_Pin_6
 #define SPIy_PIN_MOSI          GPIO_Pin_7
-
+#define SPIy_PIN_CS			   GPIO_Pin_4
 void RCC_Configuration(void)
 {
 	//RCC_PCLK2Config(RCC_HCLK_Div2); 
@@ -32,7 +32,10 @@ void GPIO_Configuration(void)
 
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(SPIy_GPIO, &GPIO_InitStructure);
-
+	
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Pin   = SPIy_PIN_CS;
+	GPIO_Init(SPIy_GPIO, &GPIO_InitStructure);
 }
 
 void led_init()
@@ -50,17 +53,20 @@ void led_init()
 
 int spi_wirte(uint8_t addr, uint8_t data)
 {
+	GPIO_ResetBits( SPIy_GPIO, SPIy_PIN_CS );
 	while (SPI_I2S_GetFlagStatus(SPIy, SPI_I2S_FLAG_TXE) == RESET);
 	SPI_I2S_SendData(SPIy, addr);
 	while (SPI_I2S_GetFlagStatus(SPIy, SPI_I2S_FLAG_TXE) == RESET);
 	SPI_I2S_SendData(SPIy, data);
-	
+	GPIO_SetBits( SPIy_GPIO, SPIy_PIN_CS );
 	return 0;
 }
 int spi_read(uint8_t addr, uint8_t *data)
 {
+	GPIO_ResetBits( SPIy_GPIO, SPIy_PIN_CS );
 	while (SPI_I2S_GetFlagStatus(SPIy, SPI_I2S_FLAG_RXNE) == RESET);
 	*data = SPI_I2S_ReceiveData(SPIy);
+	GPIO_SetBits( SPIy_GPIO, SPIy_PIN_CS );
 	return 1;
 }
 int max14830_detect()
@@ -92,7 +98,7 @@ int main(void)
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
 	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-	SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
+	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
 	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_LSB;
