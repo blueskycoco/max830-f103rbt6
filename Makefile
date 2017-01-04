@@ -63,6 +63,7 @@ ${COMPILER}:
 ${COMPILER}/max830.axf: ${COMPILER}/startup_${COMPILER}_103rbt6.o
 ${COMPILER}/max830.axf: ${COMPILER}/system_stm32f10x.o
 ${COMPILER}/max830.axf: ${COMPILER}/max830.o
+${COMPILER}/max830.axf: ${COMPILER}/syscalls.o
 ${COMPILER}/max830.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/max830.axf: max830.ld
 SCATTERgcc_max830=max830.ld
