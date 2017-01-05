@@ -7,6 +7,8 @@ SPI_InitTypeDef   SPI_InitStructure;
 USART_InitTypeDef USART_InitStructure;
 static unsigned char  fac_us=0;
 static unsigned short fac_ms=0;
+void delay_ms(unsigned short nms);
+
 void DBG_PutChar(char ptr)
 {   
 	USART_SendData(USART2, ptr);
@@ -43,7 +45,7 @@ void Spi_Init()
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOC, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
@@ -72,6 +74,20 @@ void Spi_Init()
 	SPI_Init(SPI2, &SPI_InitStructure);
  	SPI_Cmd(SPI2, ENABLE);
 
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+
+	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_8;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_6;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+	GPIO_SetBits(GPIOC,GPIO_Pin_8);
+	GPIO_SetBits(GPIOC,GPIO_Pin_6);
+	delay_ms(100);
+	GPIO_ResetBits(GPIOC,GPIO_Pin_6);
+	delay_ms(100);
+	GPIO_SetBits(GPIOC,GPIO_Pin_6);
 }
 void led_init()
 {
@@ -131,8 +147,9 @@ int max14830_detect()
 			   MAX310X_EXTREG_ENBL);
 	if (ret)
 		return ret;
-	
+	printf("spi write 0x1f 0xce\r\n");
 	spi_read(MAX310X_REVID_EXTREG, &val);
+	printf("spi read 0x05 %x\r\n",val);
 	spi_wirte(MAX310X_GLOBALCMD_REG, MAX310X_EXTREG_DSBL);
 	if (((val & MAX310x_REV_MASK) != MAX14830_REV_ID)) {
 		printf("max14830 ID 0x%02x does not match\r\n", val);
