@@ -135,11 +135,11 @@ int max14830_detect()
 	spi_read(MAX310X_REVID_EXTREG, &val);
 	spi_wirte(MAX310X_GLOBALCMD_REG, MAX310X_EXTREG_DSBL);
 	if (((val & MAX310x_REV_MASK) != MAX14830_REV_ID)) {
-		printf("max14830 ID 0x%02x does not match\n", val);
+		printf("max14830 ID 0x%02x does not match\r\n", val);
 		return -1;
 	}
 	else
-		printf("max14830 found\n");
+		printf("max14830 found\r\n");
 
 	return 0;
 }
