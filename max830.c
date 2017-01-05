@@ -69,9 +69,14 @@ void Spi_Init()
 	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
 	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_LSB;
+	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 	SPI_Init(SPI2, &SPI_InitStructure);
+	//SPI_RxFIFOThresholdConfig(SPI1, SPI_RxFIFOThreshold_HF);
+    //SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_RXNE, ENABLE);
+    /* Enable NSS output for master mode */
+    //SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_ERR, ENABLE);
+    //SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_TXE, ENABLE);
  	SPI_Cmd(SPI2, ENABLE);
 
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
@@ -133,6 +138,8 @@ int spi_wirte(uint8_t addr, uint8_t data)
 int spi_read(uint8_t addr, uint8_t *data)
 {
 	GPIO_ResetBits( GPIOB, GPIO_Pin_12 );
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
+	SPI_I2S_SendData(SPI2, addr);
 	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET);
 	*data = SPI_I2S_ReceiveData(SPI2);
 	GPIO_SetBits( GPIOB, GPIO_Pin_12 );
@@ -166,16 +173,16 @@ int main(void)
 	led_init();
 	delay_init(72);
 	Debug_uart_Init();
-	printf("in main\r\n");	
+	//printf("in main\r\n");	
 	Spi_Init();
 	max14830_detect();
 	while(1)
 	{
 		GPIO_SetBits(GPIOA,GPIO_Pin_5);
-		printf("lcd on\r\n");
+		//printf("lcd on\r\n");
 		delay_ms(1000);
 		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
-		printf("lcd off\r\n");
+		//printf("lcd off\r\n");
 		delay_ms(1000);
 	}
 	
