@@ -155,8 +155,10 @@ int main(void)
 	while(1)
 	{
 		GPIO_SetBits(GPIOA,GPIO_Pin_5);
+		printf("lcd on\r\n");
 		delay_ms(1000);
 		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
+		printf("lcd off\r\n");
 		delay_ms(1000);
 	}
 	
