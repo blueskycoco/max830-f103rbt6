@@ -61,7 +61,7 @@ extern int  _sheap;
 extern void _exit(int status);
 extern void _kill(int pid, int sig);
 extern int _getpid (void);
-
+extern void DBG_PutChar(char ptr);
 extern caddr_t _sbrk (int incr)
 {
 	static unsigned char *heap = NULL;
@@ -113,10 +113,15 @@ extern int _write(int file, char *ptr, int len)
 {
 	int iIndex;
 
-	//for (iIndex = 0; iIndex < len; iIndex++, ptr++)
-	//	DBG_PutChar(*ptr);
+	for (iIndex = 0; iIndex < len; iIndex++, ptr++)
+		DBG_PutChar(*ptr);
 
 	return iIndex;
+}
+int fputc(int ch, FILE *f)  
+{
+	DBG_PutChar(ch);
+	return ch;
 }
 
 extern void _exit(int status)

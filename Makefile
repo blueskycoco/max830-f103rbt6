@@ -67,7 +67,7 @@ ${COMPILER}/max830.axf: ${COMPILER}/syscalls.o
 ${COMPILER}/max830.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/max830.axf: max830.ld
 SCATTERgcc_max830=max830.ld
-ENTRY_max830=ResetISR
+ENTRY_max830=Reset_Handler
 CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD
 
 #

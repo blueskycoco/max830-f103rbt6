@@ -84,7 +84,7 @@ ARMGCC_ROOT:=${shell dirname '${shell sh -c "which ${CC}"}'}/..
 #
 # Set the compiler CPU/FPU options.
 #
-CPU=-mcpu=cortex-m0
+CPU=-mcpu=cortex-m3
 
 #
 # The flags passed to the assembler.
@@ -126,13 +126,13 @@ LIBGCC:=${shell ${CC} ${CFLAGS} -print-libgcc-file-name}
 #
 # Get the location of libc.a from the GCC front-end.
 #
-LIBC:=${shell ${CC} ${CFLAGS} -print-file-name=libc.a}
-
+#LIBC:=${shell ${CC} ${CFLAGS} -print-file-name=libc.a}
+LIBC:= newlibc/arm-none-eabi/lib/armv6-m/libc.a
 #
 # Get the location of libm.a from the GCC front-end.
 #
-LIBM:=${shell ${CC} ${CFLAGS} -print-file-name=libm.a}
-
+#LIBM:=${shell ${CC} ${CFLAGS} -print-file-name=libm.a}
+LIBM:=newlibc/arm-none-eabi/lib/armv6-m/libm.a
 #
 # The command for extracting images from the linked executables.
 #
