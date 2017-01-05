@@ -8,10 +8,9 @@ USART_InitTypeDef USART_InitStructure;
 static unsigned char  fac_us=0;
 static unsigned short fac_ms=0;
 void DBG_PutChar(char ptr)
-{
+{   
 	USART_SendData(USART2, ptr);
-    
-    //while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+	while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET); 
 }
 void Debug_uart_Init()
 {
@@ -31,7 +30,7 @@ void Debug_uart_Init()
 	USART_InitStructure.USART_BaudRate = 115200;
 	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	USART_InitStructure.USART_Parity = USART_Parity_Even;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 
@@ -98,11 +97,11 @@ void delay_init(unsigned char SYSCLK)
 }            
 void delay_ms(unsigned short nms)
 {    
- SysTick->LOAD=(unsigned long)nms*fac_ms;
- SysTick->CTRL|=0x01;
- while(!(SysTick->CTRL&(1<<16)));
- SysTick->CTRL&=0XFFFFFFFE;
- SysTick->VAL=0X00000000; 
+	SysTick->LOAD=(unsigned long)nms*fac_ms;
+	SysTick->CTRL|=0x01;
+	while(!(SysTick->CTRL&(1<<16)));
+	SysTick->CTRL&=0XFFFFFFFE;
+	SysTick->VAL=0X00000000; 
 }   
 
 int spi_wirte(uint8_t addr, uint8_t data)
@@ -149,23 +148,9 @@ int main(void)
 {	
 	led_init();
 	delay_init(72);
-	
 	Debug_uart_Init();
-	printf("in main\n");
-	while(1)
-	{
-		GPIO_SetBits(GPIOA,GPIO_Pin_5);
-		delay_ms(1000);
-		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
-		delay_ms(1000);
-	}
-	
-
-	Debug_uart_Init();
+	printf("in main\r\n");	
 	Spi_Init();
-	//led_init();
-	delay_init(72);
-	printf("in main\n");
 	max14830_detect();
 	while(1)
 	{
@@ -174,4 +159,5 @@ int main(void)
 		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
 		delay_ms(1000);
 	}
+	
 }

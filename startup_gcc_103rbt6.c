@@ -144,10 +144,10 @@ void (* const g_pfnVectors[])(void) =
 // for the "data" segment resides immediately following the "text" segment.
 //
 //*****************************************************************************
-extern uint32_t _etext;
-extern uint32_t _data;
+extern uint32_t _sidata;
+extern uint32_t _sdata;
 extern uint32_t _edata;
-extern uint32_t _bss;
+extern uint32_t _sbss;
 extern uint32_t _ebss;
 
 //*****************************************************************************
@@ -163,13 +163,14 @@ extern uint32_t _ebss;
 	void
 Reset_Handler(void)
 {
+	
 	uint32_t *pui32Src, *pui32Dest;
-
+	
 	//
 	// Copy the data segment initializers from flash to SRAM.
 	//
-	pui32Src = &_etext;
-	for(pui32Dest = &_data; pui32Dest < &_edata; )
+	pui32Src = &_sidata;
+	for(pui32Dest = &_sdata; pui32Dest < &_edata; )
 	{
 		*pui32Dest++ = *pui32Src++;
 	}
@@ -177,7 +178,7 @@ Reset_Handler(void)
 	//
 	// Zero fill the bss segment.
 	//
-	for(pui32Dest = &_bss; pui32Dest < &_ebss; )
+	for(pui32Dest = &_sbss; pui32Dest < &_ebss; )
 	{
 		*pui32Dest++ = 0;
 	}

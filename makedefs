@@ -122,7 +122,7 @@ LDFLAGS=--gc-sections
 # Get the location of libgcc.a from the GCC front-end.
 #
 LIBGCC:=${shell ${CC} ${CFLAGS} -print-libgcc-file-name}
-
+#LIBGCC:= newlibc/arm-none-eabi/lib/armv6-m/libg.a
 #
 # Get the location of libc.a from the GCC front-end.
 #
@@ -131,8 +131,8 @@ LIBC:= newlibc/arm-none-eabi/lib/armv6-m/libc.a
 #
 # Get the location of libm.a from the GCC front-end.
 #
-#LIBM:=${shell ${CC} ${CFLAGS} -print-file-name=libm.a}
-LIBM:=newlibc/arm-none-eabi/lib/armv6-m/libm.a
+LIBM:=${shell ${CC} ${CFLAGS} -print-file-name=libm.a}
+#LIBM:=newlibc/arm-none-eabi/lib/armv6-m/libm.a
 #
 # The command for extracting images from the linked executables.
 #
@@ -142,8 +142,9 @@ OBJCOPY=${PREFIX}-objcopy
 # Tell the compiler to include debugging information if the DEBUG environment
 # variable is set.
 #
+#DEBUG = 1
 ifdef DEBUG
-CFLAGS+=-g -D DEBUG -O0
+CFLAGS+=-g -D DEBUG -Os
 else
 CFLAGS+=-Os
 endif

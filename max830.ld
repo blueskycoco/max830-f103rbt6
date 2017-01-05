@@ -21,10 +21,11 @@
  * This is part of revision 2.1.0.12573 of the EK-TM4C1294XL Firmware Package.
  *
  *****************************************************************************/
+/* Entry Point */
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = 0x20004FFF;    /* end of RAM */
+_estack = 0x20003FFF;    /* end of RAM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
@@ -109,7 +110,7 @@ SECTIONS
   .data : 
   {
     . = ALIGN(4);
-    _data = .;        /* create a global symbol at data start */
+    _sdata = .;        /* create a global symbol at data start */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
@@ -123,8 +124,8 @@ SECTIONS
   .bss :
   {
     /* This is used by the startup in order to initialize the .bss secion */
-    _bss = .;         /* define a global symbol at bss start */
-    __bss_start__ = _bss;
+    _sbss = .;         /* define a global symbol at bss start */
+    __bss_start__ = _sbss;
     *(.bss)
     *(.bss*)
     *(COMMON)
@@ -145,7 +146,7 @@ SECTIONS
     . = ALIGN(4);
   } >RAM
 
-  _sheap = .; /* for _sbrk */
+  __cs3_heap_end = .; /* for _sbrk */
 
   
 
