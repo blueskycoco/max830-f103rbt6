@@ -8,6 +8,7 @@ USART_InitTypeDef USART_InitStructure;
 static unsigned char  fac_us=0;
 static unsigned short fac_ms=0;
 void delay_ms(unsigned short nms);
+void delay_us(unsigned long Nus);
 
 void DBG_PutChar(char ptr)
 {   
@@ -47,6 +48,7 @@ void Spi_Init()
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOC, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+	
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_15;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
@@ -68,20 +70,18 @@ void Spi_Init()
 	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
 	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 	SPI_Init(SPI2, &SPI_InitStructure);
 	//SPI_RxFIFOThresholdConfig(SPI1, SPI_RxFIFOThreshold_HF);
     //SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_RXNE, ENABLE);
     /* Enable NSS output for master mode */
-    //SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_ERR, ENABLE);
+   // SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_ERR, ENABLE);
     //SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_TXE, ENABLE);
  	SPI_Cmd(SPI2, ENABLE);
-
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-
+	GPIO_SetBits(GPIOB,GPIO_Pin_12);
 	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_8;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_6;
@@ -93,6 +93,7 @@ void Spi_Init()
 	GPIO_ResetBits(GPIOC,GPIO_Pin_6);
 	delay_ms(100);
 	GPIO_SetBits(GPIOC,GPIO_Pin_6);
+
 }
 void led_init()
 {
@@ -124,40 +125,54 @@ void delay_ms(unsigned short nms)
 	SysTick->CTRL&=0XFFFFFFFE;
 	SysTick->VAL=0X00000000; 
 }   
+void delay_us(unsigned long Nus)
+{ 
+ SysTick->LOAD=Nus*fac_us;
+ SysTick->CTRL|=0x01;
+ while(!(SysTick->CTRL&(1<<16)));
+ SysTick->CTRL=0X00000000;
+ SysTick->VAL=0X00000000;
+} 
 
 int spi_wirte(uint8_t addr, uint8_t data)
 {
-	GPIO_ResetBits( GPIOB, GPIO_Pin_12 );
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_12);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
 	SPI_I2S_SendData(SPI2, addr);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
 	SPI_I2S_SendData(SPI2, data);
-	GPIO_SetBits( GPIOB, GPIO_Pin_12 );
+	delay_us(15);
+	GPIO_SetBits(GPIOB, GPIO_Pin_12);
 	return 0;
 }
 int spi_read(uint8_t addr, uint8_t *data)
 {
-	GPIO_ResetBits( GPIOB, GPIO_Pin_12 );
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_12);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
 	SPI_I2S_SendData(SPI2, addr);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
+	SPI_I2S_SendData(SPI2, 0x00);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET){}
 	*data = SPI_I2S_ReceiveData(SPI2);
-	GPIO_SetBits( GPIOB, GPIO_Pin_12 );
+	delay_us(15);
+	GPIO_SetBits(GPIOB, GPIO_Pin_12);
 	return 1;
 }
 int max14830_detect()
 {
 	uint8_t val = 0;
 	int ret;
+	printf("spi write 0x1f 0xce\r\n");
+	//GPIO_ResetBits(GPIOB, GPIO_Pin_12);
 
 	ret = spi_wirte(MAX310X_GLOBALCMD_REG,
 			   MAX310X_EXTREG_ENBL);
 	if (ret)
 		return ret;
-	printf("spi write 0x1f 0xce\r\n");
 	spi_read(MAX310X_REVID_EXTREG, &val);
-	printf("spi read 0x05 %x\r\n",val);
 	spi_wirte(MAX310X_GLOBALCMD_REG, MAX310X_EXTREG_DSBL);
+	//GPIO_SetBits(GPIOB, GPIO_Pin_12);
+	printf("spi read 0x05 %x\r\n",val);
 	if (((val & MAX310x_REV_MASK) != MAX14830_REV_ID)) {
 		printf("max14830 ID 0x%02x does not match\r\n", val);
 		return -1;
