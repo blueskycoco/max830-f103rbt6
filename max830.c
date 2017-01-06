@@ -584,7 +584,7 @@ void EXTI9_5_IRQHandler(void)
 				if (rxlen)
 					max14830_rx(i, buf, rxlen);
 				if (ists & MAX310X_IRQ_TXEMPTY_BIT) {
-					printf("send done\r\n");
+					printf("port %d send done\r\n",i);
 				}
 			} while (1);
 		}
