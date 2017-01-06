@@ -460,9 +460,10 @@ int max310x_startup(int port)
 	spi_read(MAX310X_IRQSTS_REG + port*0x20, &val);
 
 	/* Enable RX, TX, CTS change interrupts */
-	val = MAX310X_IRQ_RXEMPTY_BIT | MAX310X_IRQ_TXEMPTY_BIT;
+	val = MAX310X_IRQ_RXEMPTY_BIT | MAX310X_IRQ_TXEMPTY_BIT/* | MAX310X_IRQ_LSR_BIT*/;
 	spi_write( MAX310X_IRQEN_REG + port*0x20, val | MAX310X_IRQ_CTS_BIT);
 
+	//spi_write(MAX310X_LSR_IRQEN_REG + port*0x20, 0x3f);
 	return 0;
 }
 unsigned int max310x_tx_empty(int port)
@@ -478,14 +479,28 @@ int max14830_tx(int port, unsigned char *buf, int len)
 {
 		uint8_t txlen,to_send;
 		int i=0;
-		spi_read(MAX310X_TXFIFOLVL_REG+port*0x20,&txlen);
-		txlen = MAX310X_FIFO_SIZE - txlen;
-		to_send = (len > txlen) ? txlen : len;
+		while(1) {
+			spi_read(MAX310X_TXFIFOLVL_REG+port*0x20,&txlen);
+			//printf("port %d fifo len %d\r\n",port,txlen);
+			txlen = MAX310X_FIFO_SIZE - txlen;
+			to_send = (len > txlen) ? txlen : len;
 
-		while (to_send--) {
-			spi_write(MAX310X_THR_REG+port*0x20,
-					   buf[i]);
-			i++;
+			//printf("port %d sending %d bytes, %d\r\n",port,to_send,len-to_send);
+			len=len-to_send;
+			while (to_send--) {
+				spi_write(MAX310X_THR_REG+port*0x20,
+						   buf[i]);
+				i++;
+			}
+			if(len<=0)
+			{
+				//printf("port %d tx done\r\n",port);
+				break;
+			}
+			else
+			{
+				delay_ms(10);
+			}
 		}
 		return (len > txlen) ? txlen : len;
 }
@@ -499,9 +514,9 @@ void max14830_rx(int port, unsigned char *buf, unsigned int rxlen)
 		spi_read(MAX310X_RHR_REG + port*0x20, &ch);
 		buf[i]=ch;
 		i++;
-		printf("%x ",ch);
+		//printf("%x ",ch);
 		}
-	printf("\r\n");
+	//printf("\r\n");
 }
 
 void max14830_init()
@@ -547,7 +562,7 @@ void max14830_init()
 		spi_update_bits(MAX310X_MODE1_REG + offs,
 				    MAX310X_MODE1_IRQSEL_BIT,
 				    MAX310X_MODE1_IRQSEL_BIT);
-
+		
 		max310x_set_termios(
 			i, 
 			MAX310X_LCR_WORD_LEN_8,
@@ -576,15 +591,18 @@ void EXTI9_5_IRQHandler(void)
 
 				printf("port %d irq ists %x, rxlen %d \r\n",i,ists,rxlen);
 
-				if (ists & MAX310X_IRQ_CTS_BIT) {
+				if (ists & (MAX310X_IRQ_CTS_BIT|MAX310X_IRQ_LSR_BIT)) {
 					spi_read( MAX310X_LSR_IRQSTS_REG+i*0x20, &lsr);
+					printf("port %d irq lsr %x\r\n",i,lsr);
 					//uart_handle_cts_change(port,
 					//			   !!(lsr & MAX310X_LSR_CTS_BIT));
 				}
+
+				
 				if (rxlen)
 					max14830_rx(i, buf, rxlen);
 				if (ists & MAX310X_IRQ_TXEMPTY_BIT) {
-					printf("port %d send done\r\n",i);
+					//printf("port %d send done\r\n",i);
 				}
 			} while (1);
 		}
@@ -603,10 +621,10 @@ int main(void)
 	max14830_init();
 	for(i=0;i<1024;i++)
 		buf[i]=i;
-	
+	i=0;
 	while(1)
 	{
-		max14830_tx(i,buf,100);
+		max14830_tx(i,buf,1000);
 		GPIO_SetBits(GPIOA,GPIO_Pin_5);
 		delay_ms(1000);
 		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
