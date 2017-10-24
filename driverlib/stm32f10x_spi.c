@@ -538,13 +538,49 @@ void SPI_I2S_DMACmd(SPI_TypeDef* SPIx, uint16_t SPI_I2S_DMAReq, FunctionalState 
 
 /**
   * @brief  Transmits a Data through the SPIx/I2Sx peripheral.
+  * @param  SPIx: where x can be 1 or 2 in SPI mode to select the SPI peripheral.
+  * @note   SPI2 is not available for STM32F031 devices.
+  * @param  Data: Data to be transmitted.
+  * @retval None
+  */
+void SPI_SendData8(SPI_TypeDef* SPIx, uint8_t Data)
+{
+  uint32_t spixbase = 0x00;
+
+  /* Check the parameters */
+  assert_param(IS_SPI_ALL_PERIPH(SPIx));
+
+  spixbase = (uint32_t)SPIx; 
+  spixbase += 0x0C;
+  
+  *(__IO uint8_t *) spixbase = Data;
+}
+
+/**
+  * @brief  Returns the most recent received data by the SPIx/I2Sx peripheral. 
+  * @param  SPIx: where x can be 1 or 2 in SPI mode to select the SPI peripheral. 
+  * @note   SPI2 is not available for STM32F031 devices.
+  * @retval The value of the received data.
+  */
+uint8_t SPI_ReceiveData8(SPI_TypeDef* SPIx)
+{
+  uint32_t spixbase = 0x00;
+  
+  spixbase = (uint32_t)SPIx; 
+  spixbase += 0x0C;
+  
+  return *(__IO uint8_t *) spixbase;
+}
+
+/**
+  * @brief  Transmits a Data through the SPIx/I2Sx peripheral.
   * @param  SPIx: where x can be
   *   - 1, 2 or 3 in SPI mode 
   *   - 2 or 3 in I2S mode
   * @param  Data : Data to be transmitted.
   * @retval None
   */
-void SPI_I2S_SendData(SPI_TypeDef* SPIx, uint16_t Data)
+void SPI_I2S_SendData16(SPI_TypeDef* SPIx, uint16_t Data)
 {
   /* Check the parameters */
   assert_param(IS_SPI_ALL_PERIPH(SPIx));
@@ -560,7 +596,7 @@ void SPI_I2S_SendData(SPI_TypeDef* SPIx, uint16_t Data)
   *   - 2 or 3 in I2S mode
   * @retval The value of the received data.
   */
-uint16_t SPI_I2S_ReceiveData(SPI_TypeDef* SPIx)
+uint16_t SPI_I2S_ReceiveData16(SPI_TypeDef* SPIx)
 {
   /* Check the parameters */
   assert_param(IS_SPI_ALL_PERIPH(SPIx));
