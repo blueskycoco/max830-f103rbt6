@@ -68,73 +68,84 @@ void (* const g_pfnVectors[])(void) =
 {
 	(void (*)(void))((uint32_t)pui32Stack + sizeof(pui32Stack)),
 	// The initial stack pointer
-	Reset_Handler,                               // The reset handler
-	NmiSR,                                  // The NMI handler
-	FaultISR,                               // The hard fault handler
-	0,                      				// The MPU fault handler
-	0,                      				// The bus fault handler
-	0,                     					// The usage fault handler
-	0,                                      // Reserved
-	0,                                      // Reserved
-	0,                                      // Reserved
-	0,                                      // Reserved
-	SVC_Handler,                      		// SVCall handler
-	DebugMon_Handler,                      	// Debug monitor handler
-	0,                                      // Reserved
-	IntDefaultHandler,   //PendSV_Handler
-	IntDefaultHandler,   //SysTick_Handler
-	IntDefaultHandler,   //WWDG_IRQHandler
-	IntDefaultHandler,   //PVD_IRQHandler
-	IntDefaultHandler,   //TAMPER_IRQHandler
-	IntDefaultHandler,   //RTC_IRQHandler
-	IntDefaultHandler,   //FLASH_IRQHandler
-	IntDefaultHandler,   //RCC_IRQHandler
-	IntDefaultHandler,   //EXTI0_IRQHandler
-	IntDefaultHandler,   //EXTI1_IRQHandler
-	IntDefaultHandler,   //EXTI2_IRQHandler
-	IntDefaultHandler,   //EXTI3_IRQHandler
-	IntDefaultHandler,   //EXTI4_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel1_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel2_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel3_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel4_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel5_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel6_IRQHandler
-	IntDefaultHandler,   //DMA1_Channel7_IRQHandler
-	IntDefaultHandler,   //ADC1_2_IRQHandler
-	IntDefaultHandler,   //USB_HP_CAN1_TX_IRQHandler
-	IntDefaultHandler,   //USB_LP_CAN1_RX0_IRQHandler
-	IntDefaultHandler,   //CAN1_RX1_IRQHandler
-	IntDefaultHandler,   //CAN1_SCE_IRQHandler
-	EXTI9_5_IRQHandler,   //EXTI9_5_IRQHandler
-	IntDefaultHandler,   //TIM1_BRK_IRQHandler
-	IntDefaultHandler,   //TIM1_UP_IRQHandler
-	IntDefaultHandler,   //TIM1_TRG_COM_IRQHandler
-	IntDefaultHandler,   //TIM1_CC_IRQHandler
-	IntDefaultHandler,   //TIM2_IRQHandler
-	IntDefaultHandler,   //TIM3_IRQHandler
-	IntDefaultHandler,   //TIM4_IRQHandler
-	IntDefaultHandler,   //I2C1_EV_IRQHandler
-	IntDefaultHandler,   //I2C1_ER_IRQHandler
-	IntDefaultHandler,   //I2C2_EV_IRQHandler
-	IntDefaultHandler,   //I2C2_ER_IRQHandler
-	IntDefaultHandler,   //SPI1_IRQHandler
-	IntDefaultHandler,   //SPI2_IRQHandler
-	IntDefaultHandler,   //USART1_IRQHandler
-	IntDefaultHandler,   //USART2_IRQHandler
-	IntDefaultHandler,   //USART3_IRQHandler
-	IntDefaultHandler,   //EXTI15_10_IRQHandler
-	IntDefaultHandler,   //RTCAlarm_IRQHandler
-	IntDefaultHandler,   //USBWakeUp_IRQHandler	
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	BootRAM          /* @0x108. This is for boot in RAM mode for 
-                            STM32F10x Medium Density devices. */
+		  Reset_Handler//              ; Reset Handler
+		, NmiSR//                ; NMI Handler
+		, FaultISR//          ; Hard Fault Handler
+		, 0//          ; MPU Fault Handler
+		, 0//           ; Bus Fault Handler
+		, 0//         ; Usage Fault Handler
+		, 0                   //       ; Reserved
+		, 0                   //       ; Reserved
+		, 0                   //       ; Reserved
+		, 0                   //       ; Reserved
+		, SVC_Handler         //       ; SVCall Handler
+		, DebugMon_Handler    //       ; Debug Monitor Handler
+		, 0                   //       ; Reserved
+		, IntDefaultHandler      //       ; PendSV Handler
+		, IntDefaultHandler     //       ; SysTick Handler
+		, IntDefaultHandler
+		, IntDefaultHandler    //        ; Window Watchdog
+		, IntDefaultHandler     //        ; PVD through EXTI Line detect
+		, IntDefaultHandler  //        ; Tamper
+		, IntDefaultHandler     //        ; RTC
+		, IntDefaultHandler   //        ; Flash
+		, IntDefaultHandler     //        ; RCC
+		, IntDefaultHandler   //        ; EXTI Line 0
+		, IntDefaultHandler   //        ; EXTI Line 1
+		, IntDefaultHandler   //        ; EXTI Line 2
+		, IntDefaultHandler   //        ; EXTI Line 3
+		, IntDefaultHandler   //        ; EXTI Line 4
+		, IntDefaultHandler //  ; DMA1 Channel 1
+		, IntDefaultHandler //  ; DMA1 Channel 2
+		, IntDefaultHandler //  ; DMA1 Channel 3
+		, IntDefaultHandler //  ; DMA1 Channel 4
+		, IntDefaultHandler //  ; DMA1 Channel 5
+		, IntDefaultHandler //  ; DMA1 Channel 6
+		, IntDefaultHandler //  ; DMA1 Channel 7
+		, IntDefaultHandler        //  ; ADC1 & ADC2
+		, IntDefaultHandler //  ; USB High Priority or CAN1 TX
+		, IntDefaultHandler //; USB Low  Priority or CAN1 RX0
+		, IntDefaultHandler        //; CAN1 RX1
+		, IntDefaultHandler        //; CAN1 SCE
+		, IntDefaultHandler         //; EXTI Line 9..5
+		, IntDefaultHandler        //; TIM1 Break
+		, IntDefaultHandler         //; TIM1 Update
+		, IntDefaultHandler    //; TIM1 Trigger and Commutation
+		, IntDefaultHandler         //; TIM1 Capture Compare
+		, IntDefaultHandler            //; TIM2
+		, IntDefaultHandler            //; TIM3
+		, IntDefaultHandler            //; TIM4
+		, IntDefaultHandler         //; I2C1 Event
+		, IntDefaultHandler         //; I2C1 Error
+		, IntDefaultHandler         //; I2C2 Event
+		, IntDefaultHandler         //; I2C2 Error
+		, IntDefaultHandler            //; SPI1
+		, IntDefaultHandler            //; SPI2
+		, IntDefaultHandler          //; USART1
+		, IntDefaultHandler          //; USART2
+		, IntDefaultHandler          //; USART3
+		, IntDefaultHandler       //; EXTI Line 15..10
+		, IntDefaultHandler        //; RTC Alarm through EXTI Line
+		, IntDefaultHandler       //; USB Wakeup from suspend
+		, IntDefaultHandler        //; TIM8 Break
+		, IntDefaultHandler         //; TIM8 Update
+		, IntDefaultHandler    //; TIM8 Trigger and Commutation
+		, IntDefaultHandler         //; TIM8 Capture Compare
+		, IntDefaultHandler            //; ADC3
+		, IntDefaultHandler            //; FSMC
+		, IntDefaultHandler            //; SDIO
+		, IntDefaultHandler            //; TIM5
+		, IntDefaultHandler            //; SPI3
+		, IntDefaultHandler           //; UART4
+		, IntDefaultHandler           //; UART5
+		, IntDefaultHandler            //; TIM6
+		, IntDefaultHandler            //; TIM7
+		, IntDefaultHandler   //; DMA2 Channel1
+		, IntDefaultHandler   //; DMA2 Channel2
+		, IntDefaultHandler   //; DMA2 Channel3
+		, IntDefaultHandler //; DMA2 Channel4 & Channel5
+		, BootRAM          /* @0x108. This is for boot in RAM mode for 
+							STM32F10x Medium Density devices. */
 };
 
 //*****************************************************************************
@@ -163,9 +174,9 @@ extern uint32_t _ebss;
 	void
 Reset_Handler(void)
 {
-	
+
 	uint32_t *pui32Src, *pui32Dest;
-	
+
 	//
 	// Copy the data segment initializers from flash to SRAM.
 	//

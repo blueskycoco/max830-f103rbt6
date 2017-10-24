@@ -60,15 +60,23 @@ ${COMPILER}:
 #
 # Rules for building the max830 example.
 #
-${COMPILER}/max830.axf: ${COMPILER}/startup_${COMPILER}_103rbt6.o
+${COMPILER}/max830.axf: ${COMPILER}/startup_${COMPILER}_103vet6.o
 ${COMPILER}/max830.axf: ${COMPILER}/system_stm32f10x.o
 ${COMPILER}/max830.axf: ${COMPILER}/max830.o
 ${COMPILER}/max830.axf: ${COMPILER}/syscalls.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_basic.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_font.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_hzk14.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_hzk16.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_hzk24.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_hzk35.o
+${COMPILER}/max830.axf: ${COMPILER}/gui_hzk64.o
+${COMPILER}/max830.axf: ${COMPILER}/lcd_driver.o
 ${COMPILER}/max830.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/max830.axf: max830.ld
 SCATTERgcc_max830=max830.ld
 ENTRY_max830=Reset_Handler
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD
 
 #
 # Include the automatically generated dependency files.
