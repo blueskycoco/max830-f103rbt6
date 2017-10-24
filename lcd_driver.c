@@ -43,7 +43,7 @@ void TFT_GPIO_Config(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOE, &GPIO_InitStructure);
 
-#if 1
+#if 0
     // A16(RS)
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_11;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
@@ -54,7 +54,7 @@ void TFT_GPIO_Config(void)
     GPIO_WriteBit(GPIOD, GPIO_Pin_11, (BitAction)1);         // A16(RS)
 #endif
 
-#if 1
+#if 0
     // CS
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_7;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
@@ -140,30 +140,30 @@ void TFT_FSMC_Config(void)
 
 void TFT_WriteCmd(uint16 cmd)
 {
-    GPIO_ResetBits(GPIOD, GPIO_Pin_11);         // A16(RS)
-    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_11);         // A16(RS)
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
 
     BOARD_LCD_R(BOARD_LCD_BASE) = cmd;
 
-    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
 }
 
 
 void TFT_WriteData(uint16 dat)
 {
-    GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
-    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
 
     BOARD_LCD_D(BOARD_LCD_BASE) = dat;
 
-    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
 }
 
 
 uint16  TFT_Read(void)
 {
-    GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
-    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
 
     return BOARD_LCD_R(BOARD_LCD_BASE);
 }
@@ -337,7 +337,7 @@ void TFT_Init(void)
     TFT_WriteData(0x0F);
 
     TFT_WriteCmd(0x11);
-    delay_ms(120);
+    delay_us(120);
     TFT_WriteCmd(0x29);
 
     printf("\r\n    TFT_Init... 3 ");

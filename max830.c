@@ -94,12 +94,12 @@ int main(void)
 	delay_init(72);
 	Debug_uart_Init();
 	TFT_Init();
-	/*GUI_PutString(FONT_16, 10, 20, "Welcome! 保单", WHITE, BLACK);
+	GUI_PutString(FONT_16, 10, 20, "Welcome! 保单", WHITE, BLACK);
 	GUI_PutString(FONT_14, 10, 60, "Welcome! 模", WHITE, BLACK);
 	GUI_PutString(FONT_24, 10, 90, "Welcome! 波源", WHITE, BLACK);
 	GUI_PutString(FONT_35, 10, 120, "Welcome! 频率", WHITE, BLACK);
 	GUI_PutString(FONT_64, 10, 180, "23.5", WHITE, BLACK);
-*/
+
 	x1 = 10;
 	y1 = 300;
 
@@ -118,7 +118,7 @@ int main(void)
 		printf("we are here , hello\r\n");
 		x1++;
 		sprintf(str, "%d", x1);
-	//	GUI_PutString(FONT_24, 10, 420, str, WHITE, BLACK);
+		GUI_PutString(FONT_24, 10, 420, str, WHITE, BLACK);
 
 		GUI_DispColor(200, 260, 380, 440, color[x1 % 8]);
 	}
