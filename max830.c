@@ -115,7 +115,7 @@ int main(void)
 		delay_ms(1000);
 		GPIO_ResetBits(GPIOE,GPIO_Pin_2);
 		delay_ms(1000);
-		printf("we are here , hello\r\n");
+		//printf("we are here , hello\r\n");
 		x1++;
 		sprintf(str, "%d", x1);
 		GUI_PutString(FONT_24, 10, 420, str, WHITE, BLACK);
