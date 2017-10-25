@@ -2,7 +2,13 @@
 #include "lcd_driver.h"
 #include <stm32f10x.h>
 
-
+typedef struct
+{
+	vu16 LCD_REG;
+	vu16 LCD_RAM;
+} LCD_TypeDef;
+#define LCD_BASE    ((u32)(0x60000000))
+#define LCD         ((LCD_TypeDef *) LCD_BASE)
 
 /****************************************************************************
 *函数名：TFT_GPIO_Config
@@ -22,7 +28,7 @@ void TFT_GPIO_Config(void)
 
     // CS(PD7/FSMC-NE1/FSMC-NCE2)
     // RD/WR/CS/A16(RS)
-    GPIO_InitStructure.GPIO_Pin   = ( GPIO_Pin_4 | GPIO_Pin_5 /*| GPIO_Pin_7 | GPIO_Pin_11*/);
+    GPIO_InitStructure.GPIO_Pin   = ( GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_7/* | GPIO_Pin_11*/);
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOD, &GPIO_InitStructure);
@@ -54,7 +60,7 @@ void TFT_GPIO_Config(void)
     GPIO_WriteBit(GPIOD, GPIO_Pin_11, (BitAction)1);         // A16(RS)
 #endif
 
-#if 1
+#if 0
     // CS
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_7;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
@@ -94,17 +100,17 @@ void TFT_FSMC_Config(void)
 
     /* 设置读写时序，给FSMC_NORSRAMInitStructure调用 */
     /* 地址建立时间，4个HCLK周期 */
-    FSMC_NORSRAMTiming.FSMC_AddressSetupTime = 0x03;
+    FSMC_NORSRAMTiming.FSMC_AddressSetupTime = 0;//0x03;
     /* 地址保持时间，1个HCLK周期 */
-    FSMC_NORSRAMTiming.FSMC_AddressHoldTime  = 0x02;
+    FSMC_NORSRAMTiming.FSMC_AddressHoldTime  = 0;//0x02;
     /* 数据建立时间，6个HCLK周期 */
-    FSMC_NORSRAMTiming.FSMC_DataSetupTime    = 0x05;
+    FSMC_NORSRAMTiming.FSMC_DataSetupTime    = 7;//0x05;
     /* 总线恢复时间设置 */
-    FSMC_NORSRAMTiming.FSMC_BusTurnAroundDuration = 0x02;
+    FSMC_NORSRAMTiming.FSMC_BusTurnAroundDuration = 0;//0x02;
     /* 时钟分频设置 */
-    FSMC_NORSRAMTiming.FSMC_CLKDivision = 0x00;                     // 主频分时钟      
+    FSMC_NORSRAMTiming.FSMC_CLKDivision = 0;//0x00;                     // 主频分时钟      
     /* 数据保持时间，1个HCLK周期 */
-    FSMC_NORSRAMTiming.FSMC_DataLatency = 0x02;
+    FSMC_NORSRAMTiming.FSMC_DataLatency = 0;//0x02;
     /* 设置模式，如果在地址/数据不复用时，ABCD模式都区别不大 */
     FSMC_NORSRAMTiming.FSMC_AccessMode  = FSMC_AccessMode_A;
 
@@ -148,29 +154,31 @@ void TFT_FSMC_Config(void)
 void TFT_WriteCmd(uint16 cmd)
 {
     GPIO_ResetBits(GPIOD, GPIO_Pin_11);         // A16(RS)
-    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
 
-    BOARD_LCD_R(BOARD_LCD_BASE) = cmd;
+    //BOARD_LCD_R(BOARD_LCD_BASE) = cmd;
+    LCD->LCD_REG = cmd;
 
-    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
 }
 
 
 void TFT_WriteData(uint16 dat)
 {
     GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
-    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
 
-    BOARD_LCD_D(BOARD_LCD_BASE) = dat;
+    //BOARD_LCD_D(BOARD_LCD_BASE) = dat;
+    LCD->LCD_REG = dat;
 
-    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_7);            // CS
 }
 
 
 uint16  TFT_Read(void)
 {
-    GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
-    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
+//    GPIO_SetBits(GPIOD, GPIO_Pin_11);           // A16(RS)
+//    GPIO_ResetBits(GPIOD, GPIO_Pin_7);          // CS
 
     return BOARD_LCD_R(BOARD_LCD_BASE);
 }
