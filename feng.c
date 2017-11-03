@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stm32f10x.h>
 #include "max830.h"
-USART_InitTypeDef USART_InitStructure;
 static unsigned char  fac_us=0;
 static unsigned short fac_ms=0;
 void delay_ms(unsigned short nms);
@@ -16,6 +15,7 @@ void DBG_PutChar(char ptr)
 }
 void Debug_uart_Init()
 {
+	USART_InitTypeDef USART_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);

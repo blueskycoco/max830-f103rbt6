@@ -64,6 +64,7 @@ ${COMPILER}/feng.axf: ${COMPILER}/startup_stm32f10x_hd.o
 ${COMPILER}/feng.axf: ${COMPILER}/system_stm32f10x.o
 ${COMPILER}/feng.axf: ${COMPILER}/feng.o
 ${COMPILER}/feng.axf: ${COMPILER}/syscalls.o
+${COMPILER}/feng.axf: ${COMPILER}/dwin.o
 ${COMPILER}/feng.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/feng.axf: feng.ld
 SCATTERgcc_feng=feng.ld
