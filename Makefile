@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-# Makefile - Rules for building the max830 example.
+# Makefile - Rules for building the feng example.
 #
 # Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 # Software License Agreement
@@ -38,10 +38,10 @@ include ${ROOT}/makedefs
 IPATH=./inc
 
 #
-# The default rule, which causes the max830 example to be built.
+# The default rule, which causes the feng example to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/max830.axf
+all: ${COMPILER}/feng.axf
 
 #
 # The rule to clean out all the build products.
@@ -58,17 +58,17 @@ ${COMPILER}:
 	@mkdir -p ${COMPILER}
 
 #
-# Rules for building the max830 example.
+# Rules for building the feng example.
 #
-${COMPILER}/max830.axf: ${COMPILER}/startup_${COMPILER}_103rbt6.o
-${COMPILER}/max830.axf: ${COMPILER}/system_stm32f10x.o
-${COMPILER}/max830.axf: ${COMPILER}/max830.o
-${COMPILER}/max830.axf: ${COMPILER}/syscalls.o
-${COMPILER}/max830.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
-${COMPILER}/max830.axf: max830.ld
-SCATTERgcc_max830=max830.ld
-ENTRY_max830=Reset_Handler
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD
+${COMPILER}/feng.axf: ${COMPILER}/startup_stm32f10x_hd.o
+${COMPILER}/feng.axf: ${COMPILER}/system_stm32f10x.o
+${COMPILER}/feng.axf: ${COMPILER}/feng.o
+${COMPILER}/feng.axf: ${COMPILER}/syscalls.o
+${COMPILER}/feng.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
+${COMPILER}/feng.axf: feng.ld
+SCATTERgcc_feng=feng.ld
+ENTRY_feng=Reset_Handler
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD
 
 #
 # Include the automatically generated dependency files.
