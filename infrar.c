@@ -5,6 +5,7 @@
 #include "max830.h"
 SPI_InitTypeDef   SPI_InitStructure;
 USART_InitTypeDef USART_InitStructure;
+extern void SWO_Enable(void);
 static unsigned char  fac_us=0;
 static unsigned short fac_ms=0;
 unsigned long max18430_xtal = 3686400;
@@ -617,6 +618,7 @@ int main(void)
 	int i=0;
 	led_init();
 	delay_init(72);
+	SWO_Enable();
 	Debug_uart_Init();
 	max14830_init();
 	for(i=0;i<1024;i++)

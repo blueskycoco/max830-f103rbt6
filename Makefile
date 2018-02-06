@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-# Makefile - Rules for building the max830 example.
+# Makefile - Rules for building the infrar example.
 #
 # Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 # Software License Agreement
@@ -38,10 +38,10 @@ include ${ROOT}/makedefs
 IPATH=./inc
 
 #
-# The default rule, which causes the max830 example to be built.
+# The default rule, which causes the infrar example to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/max830.axf
+all: ${COMPILER}/infrar.axf
 
 #
 # The rule to clean out all the build products.
@@ -58,16 +58,16 @@ ${COMPILER}:
 	@mkdir -p ${COMPILER}
 
 #
-# Rules for building the max830 example.
+# Rules for building the infrar example.
 #
-${COMPILER}/max830.axf: ${COMPILER}/startup_${COMPILER}_103rbt6.o
-${COMPILER}/max830.axf: ${COMPILER}/system_stm32f10x.o
-${COMPILER}/max830.axf: ${COMPILER}/max830.o
-${COMPILER}/max830.axf: ${COMPILER}/syscalls.o
-${COMPILER}/max830.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
-${COMPILER}/max830.axf: max830.ld
-SCATTERgcc_max830=max830.ld
-ENTRY_max830=Reset_Handler
+${COMPILER}/infrar.axf: ${COMPILER}/startup_${COMPILER}_103c8t6.o
+${COMPILER}/infrar.axf: ${COMPILER}/system_stm32f10x.o
+${COMPILER}/infrar.axf: ${COMPILER}/infrar.o
+${COMPILER}/infrar.axf: ${COMPILER}/syscalls.o
+${COMPILER}/infrar.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
+${COMPILER}/infrar.axf: infrar.ld
+SCATTERgcc_infrar=infrar.ld
+ENTRY_infrar=Reset_Handler
 CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD
 
 #
