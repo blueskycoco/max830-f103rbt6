@@ -80,7 +80,7 @@ void led(int on)
 	if (on)
 		GPIO_ResetBits(GPIOB,GPIO_Pin_14);
 	else
-		GPIO_SetBits(GPIOB,GPIO_Pin_15);
+		GPIO_SetBits(GPIOB,GPIO_Pin_14);
 }
 
 unsigned short Packet_CRC(unsigned char *Data,unsigned char Data_length)
@@ -110,7 +110,7 @@ void ctl_int(int line, int flag)
 	uint32_t tmp = 0;
 	tmp = (uint32_t)EXTI_BASE;
     tmp += EXTI_Mode_Interrupt;
-	if (flag)
+	if (!flag)
     	*(__IO uint32_t *) tmp &= ~line;
 	else
 		*(__IO uint32_t *) tmp |= line;

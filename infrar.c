@@ -162,26 +162,32 @@ void EXTI15_10_IRQHandler(void)
 	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
 	{
 		/* infrar */
-		EXTI_ClearITPendingBit(EXTI_Line13);
 		key |= KEY_INFRAR;
-		ctl_int(EXTI_Line13,0);
+		EXTI_ClearITPendingBit(EXTI_Line13);
+		//ctl_int(EXTI_Line13,0);
 	}
 	
 	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
 	{
 		/* S1 key*/
-		EXTI_ClearITPendingBit(EXTI_Line12);
 		key |= KEY_S1;
-		ctl_int(EXTI_Line12,0);
+		EXTI_ClearITPendingBit(EXTI_Line12);
+		//ctl_int(EXTI_Line12,0);
 	}
 
 	if(EXTI_GetITStatus(EXTI_Line10) != RESET)
 	{
 		/* S1 key*/
-		EXTI_ClearITPendingBit(EXTI_Line10);
 		key |= KEY_CAN;
-		ctl_int(EXTI_Line10,0);
+		EXTI_ClearITPendingBit(EXTI_Line10);
+		//ctl_int(EXTI_Line10,0);
 	}
+	
+    if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
+    {
+      /* Clear Wake Up flag */
+      PWR_ClearFlag(PWR_FLAG_WU);
+    }
 }
 void RTCAlarm_IRQHandler(void)
 {
@@ -360,12 +366,16 @@ void handle_timer()
 		if (last_sub_cmd & 0x04)
 			handle_can_cmd(CMD_LOW_POWER,0x00);
 	}
-
+printf("handle timer 1\r\n");
     RTC_ClearFlag(RTC_FLAG_SEC);
+printf("handle timer 2\r\n");
     while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
+printf("handle timer 3\r\n");
 
     RTC_SetAlarm(RTC_GetCounter()+ 5);
+printf("handle timer 4\r\n");
     RTC_WaitForLastTask();
+printf("handle timer 5\r\n");
 
 	//unsigned short bat = read_adc();
 	//if (bat < MIN_BAT)
@@ -392,27 +402,28 @@ void task()
 	while (1) {
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 		SYSCLKConfig_STOP();
+		__disable_irq();
 		printf("wake from stop\r\n");
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
 			printf("handle timer\r\n");
-			handle_timer();
+			//handle_timer();
 		}
-
+		#if 1
 		if (key & KEY_S1) {
 			key &= ~KEY_S1;
 			/*send s1 alarm to stm32*/
 			handle_can_cmd(CMD_ALARM, 0x02);
-			ctl_int(EXTI_Line12,0);
+			//ctl_int(EXTI_Line12,1);
 		}
 
 		if (key & KEY_INFRAR) {
 			key &= ~KEY_INFRAR;
 			/*send infrar alarm to stm32*/
 			//add int count then make decision
-			if (b_protection_state)
+			//if (b_protection_state)
 			handle_can_cmd(CMD_ALARM, 0x01);
-			ctl_int(EXTI_Line13,1);
+			//ctl_int(EXTI_Line13,1);
 		}
 
 		if (key & KEY_CAN) {
@@ -421,6 +432,10 @@ void task()
 			handle_can_resp();
 			ctl_int(EXTI_Line10,1);
 		}
+		#endif
+		printf("goto stop\r\n");
+		delay_ms(1000);
+		__enable_irq();
 	}
 	return ;
 }
@@ -431,7 +446,7 @@ int main(void)
 	delay_init(72);
 	SWO_Enable();
 	Debug_uart_Init();
-	delay_ms(10000);
+//	delay_ms(10000);
 	printf("in int_init\r\n");
 	int_init();
 	printf("in can_init\r\n");
