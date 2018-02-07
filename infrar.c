@@ -4,6 +4,7 @@
 #include <stm32f10x.h>
 #include <string.h>
 #include "mymisc.h"
+#include "can.h"
 extern void SWO_Enable(void);
 #define DEVICE_MODE		0xD1
 #define ID_CODE_LEN		4
@@ -208,61 +209,35 @@ void RTCAlarm_IRQHandler(void)
 }
 
 /*
-  	msp430 -> stm32 
-	0x01 can_addr 0x6c 0xaa data_len stm32_id msp430_id cmd_type sub_cmd_type device_type battery crc
+	103c8t6 -> stm32
+	cmd_type 2 sub_cmd_type/device_mode 1 device_type 1 103c8t6_id 4
 */
 void handle_can_addr(uint8_t *id, uint8_t res) 
 {	
 	unsigned char cmd[32] = {0x00};
 	unsigned char ofs = 0;
-	cmd[0] = STM32_ADDR;cmd[1] = can_addr;
-	cmd[2] = MSG_HEAD0;cmd[3] = MSG_HEAD1;
-	ofs = 5;
-	if (id == NULL) 
-		memset(cmd+ofs, 0, STM32_CODE_LEN);
-	else
-		memcpy(cmd+ofs, id, STM32_CODE_LEN);
-	ofs += STM32_CODE_LEN;	
+	cmd[ofs++] = (CMD_REG_CODE >> 8) & 0xff;
+	cmd[ofs++] = CMD_REG_CODE & 0xff;
+	cmd[ofs++] = DEVICE_TYPE;
+	cmd[ofs++] = DEVICE_MODE;
 	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
-	if (id == NULL) {
-		cmd[ofs++] = (CMD_REG_CODE >> 8) & 0xff;
-		cmd[ofs++] = CMD_REG_CODE & 0xff;
-		cmd[ofs++] = DEVICE_TYPE;
-		cmd[ofs++] = DEVICE_MODE;
-	} else {		
-		cmd[ofs++] = (CMD_CONFIRM_CODE >> 8) & 0xff;
-		cmd[ofs++] = CMD_CONFIRM_CODE & 0xff;
-		cmd[ofs++] = res;
-		cmd[ofs++] = can_addr;
-	}
-	unsigned short bat = 0;//read_adc();
-	cmd[ofs++] = (bat >> 8) & 0xff;
-	cmd[ofs++] = (bat) & 0xff;
-	cmd[4] = ofs-3; 
-	unsigned short crc = Packet_CRC(cmd, ofs);
-	cmd[ofs++] = (crc >> 8) & 0xff;
-	cmd[ofs++] = (crc) & 0xff;
-//	can_send(cmd, ofs);
+	can_send(cmd, ofs);
 }
 void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd) 
 {	
 	unsigned char cmd[32] = {0x00};
 	unsigned char ofs = 0;
-	cmd[0] = STM32_ADDR;cmd[1] = can_addr;
-	cmd[2] = MSG_HEAD0;cmd[3] = MSG_HEAD1;
-	ofs = 5;
-	memcpy(cmd+ofs, stm32_id, STM32_CODE_LEN);	
-	ofs += STM32_CODE_LEN;
+	cmd[ofs++] = (main_cmd >> 8) & 0xff;
+	cmd[ofs++] = main_cmd & 0xff;
+	cmd[ofs++] = sub_cmd;
+	cmd[ofs++] = DEVICE_TYPE;
 	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
-	cmd[ofs++] = (main_cmd >> 8) & 0xff;
-	cmd[ofs++] = main_cmd & 0xff;
-	cmd[ofs++] = sub_cmd;
 
 	if (main_cmd == CMD_ALARM) {
 		if (sub_cmd == 0x01)
@@ -271,21 +246,9 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 			last_sub_cmd |= 0x01;
 	} else if (main_cmd == CMD_LOW_POWER) {
 		last_sub_cmd |= 0x04;
-	} else if (main_cmd == CMD_CUR_STATUS) {
-		last_sub_cmd |= 0x08;
 	}
 	
-	cmd[ofs++] = DEVICE_TYPE;
-	unsigned short bat = 0;//read_adc();
-	//if (b_protection_state)
-	//	ca_ctl(1);
-	cmd[ofs++] = (bat >> 8) & 0xff;
-	cmd[ofs++] = (bat) & 0xff;	
-	cmd[4] = ofs-3; 
-	unsigned short crc = Packet_CRC(cmd, ofs);
-	cmd[ofs++] = (crc >> 8) & 0xff;
-	cmd[ofs++] = (crc) & 0xff;
-//	can_send(cmd, ofs);
+	can_send(cmd, ofs);
 }
 
 void switch_protect(unsigned char state)
@@ -309,16 +272,17 @@ void switch_protect(unsigned char state)
 	}				
 }
 /*	
-	stm32 -> msp430
-	can_addr 0x01 0x6c 0xaa data_len stm32_id msp430_id cmd_type sub_cmd_type result/protect_status crc
+	stm32 -> 103c8t6
+	cmd_type 2 sub_cmd_type 1 result/protect_status/addr 1 103c8t6_id 4
 */
 void handle_can_resp()
 {
 	unsigned char resp[32] = {0};
 	unsigned char len = 32;
 	unsigned short cmd_type = 0;
-	int result = 0;//can_read(resp, &len);
+	int result = can_read(resp, &len);
 	if (result !=0 && len > 0) {
+		#if 0
 		if (resp[2] != MSG_HEAD0 || resp[3] != MSG_HEAD1)
 			return ;		
 		if (resp[4] != len -5)
@@ -338,6 +302,7 @@ void handle_can_resp()
 			return ;
 		
 	cmd_type = resp[15]<<8 | resp[16];
+	#endif
 	switch (cmd_type) {
 		case CMD_REG_CODE_ACK:	
 			if (resp[len+2] != 0x00 && can_addr == 0) {/*if get vaild addr && curr addr ==0*/
@@ -458,5 +423,6 @@ int main(void)
 	SWO_Enable();
 	Debug_uart_Init();
 	int_init();
+	can_init();
 	task();
 }
