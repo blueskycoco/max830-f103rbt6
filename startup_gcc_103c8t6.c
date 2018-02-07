@@ -43,6 +43,7 @@ static void DebugMon_Handler(void);
 //*****************************************************************************
 extern void EXTI15_10_IRQHandler(void);
 extern void RTCAlarm_IRQHandler(void);
+extern void CAN1_RX0_IRQHandler(void);
 //*****************************************************************************
 //
 // The entry point for the application.

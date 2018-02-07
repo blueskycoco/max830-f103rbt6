@@ -380,13 +380,22 @@ void task()
 	led(1);
 	delay_ms(1000);
 	led(0);
+	printf("begin to ask addr\r\n");
 	handle_can_addr(NULL, 0);
+	RTC_ClearFlag(RTC_FLAG_SEC);
+    while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
+
+    /* Set the RTC Alarm after 3s */
+    RTC_SetAlarm(RTC_GetCounter()+ 5);
+    /* Wait until last write operation on RTC registers has finished */
+    RTC_WaitForLastTask();
 	while (1) {
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 		SYSCLKConfig_STOP();
-		
+		printf("wake from stop\r\n");
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
+			printf("handle timer\r\n");
 			handle_timer();
 		}
 
@@ -422,7 +431,11 @@ int main(void)
 	delay_init(72);
 	SWO_Enable();
 	Debug_uart_Init();
+	delay_ms(10000);
+	printf("in int_init\r\n");
 	int_init();
+	printf("in can_init\r\n");
 	can_init();
+	printf("in task\r\n");
 	task();
 }

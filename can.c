@@ -25,18 +25,23 @@ CanTxMsg TxMessage;
 #define GPIO_Pin_CAN_RX 		   GPIO_Pin_CAN1_RX
 #define GPIO_Pin_CAN_TX 		   GPIO_Pin_CAN1_TX
 
-void CAN1_RX0_IRQHandler(void)
-{
-  CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
-  if ((RxMessage.StdId == 0x321)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 1))
-  {
+//void CAN1_RX0_IRQHandler(void)
+//{
+//  CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
+//  if ((RxMessage.StdId == 0x321)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 1))
+//  {
 	//LED_Display(RxMessage.Data[0]);
 	//KeyNumber = RxMessage.Data[0];
-  }
-}
+//  }
+//}
 int can_send(unsigned char *payload, unsigned char payload_len)
 {
+	int i;
 	memcpy(TxMessage.Data, payload, 8);
+	printf("CAN send:\r\n");
+	for (i=0;i<payload_len;i++)
+		printf("%02x ", payload[i]);
+	printf("\r\n");
 	CAN_Transmit(CANx, &TxMessage);
 	return 1;
 }
