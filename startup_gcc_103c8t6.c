@@ -41,8 +41,8 @@ static void DebugMon_Handler(void);
 // External declaration for the interrupt handler used by the application.
 //
 //*****************************************************************************
-extern void EXTI9_5_IRQHandler(void);
-
+extern void EXTI15_10_IRQHandler(void);
+extern void RTCAlarm_IRQHandler(void);
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -123,8 +123,8 @@ void (* const g_pfnVectors[])(void) =
 	 IntDefaultHandler,    //	USART1_IRQHandler
 	 IntDefaultHandler,    //	USART2_IRQHandler
 	 IntDefaultHandler,    //	USART3_IRQHandler
-	 IntDefaultHandler,    //	EXTI15_10_IRQHandler
-	 IntDefaultHandler,    //	RTCAlarm_IRQHandler
+	 EXTI15_10_IRQHandler,    //	EXTI15_10_IRQHandler
+	 RTCAlarm_IRQHandler,    //	RTCAlarm_IRQHandler
 	 IntDefaultHandler,    //	USBWakeUp_IRQHandler	
 	0,
 	0,

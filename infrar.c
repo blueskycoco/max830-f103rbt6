@@ -2,638 +2,461 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stm32f10x.h>
-#include "max830.h"
-SPI_InitTypeDef   SPI_InitStructure;
-USART_InitTypeDef USART_InitStructure;
+#include <string.h>
+#include "mymisc.h"
 extern void SWO_Enable(void);
-static unsigned char  fac_us=0;
-static unsigned short fac_ms=0;
-unsigned long max18430_xtal = 3686400;
-unsigned char buf[1024];
-void delay_ms(unsigned short nms);
-void delay_us(unsigned long Nus);
+#define DEVICE_MODE		0xD1
+#define ID_CODE_LEN		4
+#define STM32_CODE_LEN	6
+#define ID_CODE			0x00000001
+#define CMD_REG_CODE		0x0000
+#define CMD_REG_CODE_ACK	0x0001
+#define CMD_CONFIRM_CODE	0x0014
+#define CMD_CONFIRM_CODE_ACK	0x0015
+#define CMD_ALARM		0x0006
+#define CMD_ALARM_ACK	0x0007
+#define CMD_LOW_POWER	0x000c
+#define CMD_LOW_POWER_ACK	0x000d
+#define CMD_CUR_STATUS	0x0010
+#define CMD_CUR_STATUS_ACK	0x0011
 
-void DBG_PutChar(char ptr)
-{   
-	USART_SendData(USART2, ptr);
-	while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET); 
-}
-void Debug_uart_Init()
-{
-	GPIO_InitTypeDef GPIO_InitStructure;
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+#define DEVICE_TYPE		0x02
+#define MSG_HEAD0		0x6c
+#define MSG_HEAD1		0xaa
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+#define KEY_CODE	0x01
+#define KEY_INFRAR	0x02
+#define KEY_S1		0x04
+#define KEY_TIMER 	0x08
+#define KEY_CAN	0x10
+//#define KEY_LOWPOWER	0x20
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+#define STATE_ASK_CC1101_ADDR		0
+#define STATE_CONFIRM_CC1101_ADDR	1
+#define STATE_PROTECT_ON			2
+#define STATE_PROTECT_OFF			3
+unsigned char g_state = STATE_ASK_CC1101_ADDR;
+#define MIN_BAT		0x96
+unsigned char b_protection_state = 0;	/*protection state*/
+unsigned char last_sub_cmd = 0x00; /*0x01 s1_alarm, 0x02 infrar_alarm, 0x04 low_power_alarm, 0x08 cur_status*/
+volatile unsigned char key = 0x0;
+unsigned char stm32_id[STM32_CODE_LEN] = {0};
+unsigned char zero_id[STM32_CODE_LEN] = {0};
+unsigned char can_addr = 0;
+#define STM32_ADDR	0x01
 
-	USART_InitStructure.USART_BaudRate = 115200;
-	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-	USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	USART_InitStructure.USART_Parity = USART_Parity_No;
-	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-
-	USART_Init(USART2, &USART_InitStructure);
-
-	USART_Cmd(USART2, ENABLE);
-}
-
-void Spi_Init()
-{
-	GPIO_InitTypeDef GPIO_InitStructure;
-
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOC, ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
-	
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_15;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
-
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_12;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	GPIO_SetBits(GPIOB,GPIO_Pin_12);
-	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
-	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
-	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-	SPI_InitStructure.SPI_CRCPolynomial = 7;
-	SPI_Init(SPI2, &SPI_InitStructure);
-	
- 	SPI_Cmd(SPI2, ENABLE);
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_8;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_6;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-	GPIO_SetBits(GPIOC,GPIO_Pin_8);
-	GPIO_SetBits(GPIOC,GPIO_Pin_6);
-	delay_ms(100);
-	GPIO_ResetBits(GPIOC,GPIO_Pin_6);
-	delay_ms(100);
-	GPIO_SetBits(GPIOC,GPIO_Pin_6);
-
-}
-
-void max14830_int_init()
+void int_init()
 {
 	EXTI_InitTypeDef   EXTI_InitStructure;
 	GPIO_InitTypeDef   GPIO_InitStructure;
 	NVIC_InitTypeDef   NVIC_InitStructure;
-	/* Enable GPIOG clock */
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
 
-	/* Configure PG.08 pin as input floating */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_13;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-	/* Enable AFIO clock */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
-	/* Connect EXTI8 Line to PG.08 pin */
-	GPIO_EXTILineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource5);
 
-	/* Configure EXTI8 line */
-	EXTI_InitStructure.EXTI_Line = EXTI_Line5;
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
+
+	EXTI_InitStructure.EXTI_Line = EXTI_Line12|EXTI_Line13;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
-	/* Enable and set EXTI9_5 Interrupt to the lowest priority */
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&NVIC_InitStructure);
+	
+	/* Configure EXTI Line17(RTC Alarm) to generate an interrupt on rising edge */
+	EXTI_ClearITPendingBit(EXTI_Line17);
+	EXTI_InitStructure.EXTI_Line = EXTI_Line17;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+	
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+	NVIC_InitStructure.NVIC_IRQChannel = RTCAlarm_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
-}
-void led_init()
-{
-	GPIO_InitTypeDef GPIO_InitStructure;
+	NVIC_Init(&NVIC_InitStructure);
+	/* RTC clock source configuration ------------------------------------------*/
+	/* Allow access to BKP Domain */
+	PWR_BackupAccessCmd(ENABLE);
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);
+	/* Reset Backup Domain */
+	BKP_DeInit();
 
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
-}
-void delay_init(unsigned char SYSCLK)
-{
-	SysTick->VAL=0X00000000;
-	SysTick->CTRL&=0xfffffffb;
-	fac_us=SYSCLK/8;      
-	fac_ms=(unsigned short)fac_us*1000;
-	SysTick->CTRL&=0XFFFFFFFE;
-	SysTick->VAL=0X00000000;
- 
-}            
-void delay_ms(unsigned short nms)
-{    
-	SysTick->LOAD=(unsigned long)nms*fac_ms;
-	SysTick->CTRL|=0x01;
-	while(!(SysTick->CTRL&(1<<16)));
-	SysTick->CTRL&=0XFFFFFFFE;
-	SysTick->VAL=0X00000000; 
-}   
-void delay_us(unsigned long Nus)
-{ 
-	SysTick->LOAD=Nus*fac_us;
-	SysTick->CTRL|=0x01;
-	while(!(SysTick->CTRL&(1<<16)));
-	SysTick->CTRL=0X00000000;
-	SysTick->VAL=0X00000000;
-} 
-
-int spi_write(uint8_t addr, uint8_t data)
-{
-	GPIO_ResetBits(GPIOB, GPIO_Pin_12);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
-	SPI_I2S_SendData(SPI2, 0x80|addr);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET){}
-	SPI_I2S_ReceiveData(SPI2);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
-	SPI_I2S_SendData(SPI2, data);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET){}
-	SPI_I2S_ReceiveData(SPI2);
-	GPIO_SetBits(GPIOB, GPIO_Pin_12);
-	return 0;
-}
-int spi_read(uint8_t addr, uint8_t *data)
-{
-	GPIO_ResetBits(GPIOB, GPIO_Pin_12);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
-	SPI_I2S_SendData(SPI2, addr);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET){}
-	SPI_I2S_ReceiveData(SPI2);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET){}
-	SPI_I2S_SendData(SPI2, 0x00);
-	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET){}
-	*data = SPI_I2S_ReceiveData(SPI2);
-	GPIO_SetBits(GPIOB, GPIO_Pin_12);
-	return 1;
-}
-int max14830_detect()
-{
-	uint8_t val = 0;
-	int ret;
-
-	ret = spi_write(MAX310X_GLOBALCMD_REG,
-			   MAX310X_EXTREG_ENBL);
-	if (ret)
-		return ret;
-	spi_read(MAX310X_REVID_EXTREG, &val);
-	spi_write(MAX310X_GLOBALCMD_REG, MAX310X_EXTREG_DSBL);
-
-	if (((val & MAX310x_REV_MASK) != MAX14830_REV_ID)) {
-		printf("max14830 ID 0x%02x does not match\r\n", val);
-		return -1;
-	}
-	else
-		printf("max14830 found\r\n");
-
-	return 0;
-}
-int max310x_update_best_err(unsigned long f, long *besterr)
-{
-	/* Use baudrate 115200 for calculate error */
-	long err = f % (115200 * 16);
-
-	if ((*besterr < 0) || (*besterr > err)) {
-		*besterr = err;
-		return 0;
-	}
-
-	return 1;
-}
-unsigned long DIV_ROUND_CLOSEST(unsigned long x, unsigned int divisor)
-{
-         unsigned int __divisor = divisor;
-		 unsigned long ret;
-		 ret = (((x)+ ((__divisor) / 2)) / (__divisor));
-
-		 printf("DIV_ROUND_CLOSEST %ld, %d, %ld\r\n",x,divisor,ret);
-		 return ret;
-}
-
-int max310x_set_ref_clk(unsigned long freq,
-			       bool xtal)
-{
-	unsigned int div, clksrc, pllcfg = 0;
-	long besterr = -1;
-	unsigned long fdiv, fmul, bestfreq = freq;
-
-	/* First, update error without PLL */
-	max310x_update_best_err(freq, &besterr);
-
-	/* Try all possible PLL dividers */
-	for (div = 1; (div <= 63) && besterr; div++) {
-		fdiv = DIV_ROUND_CLOSEST(freq, div);
-
-		/* Try multiplier 6 */
-		fmul = fdiv * 6;
-		if ((fdiv >= 500000) && (fdiv <= 800000))
-			if (!max310x_update_best_err(fmul, &besterr)) {
-				pllcfg = (0 << 6) | div;
-				bestfreq = fmul;
-			}
-		/* Try multiplier 48 */
-		fmul = fdiv * 48;
-		if ((fdiv >= 850000) && (fdiv <= 1200000))
-			if (!max310x_update_best_err(fmul, &besterr)) {
-				pllcfg = (1 << 6) | div;
-				bestfreq = fmul;
-			}
-		/* Try multiplier 96 */
-		fmul = fdiv * 96;
-		if ((fdiv >= 425000) && (fdiv <= 1000000))
-			if (!max310x_update_best_err(fmul, &besterr)) {
-				pllcfg = (2 << 6) | div;
-				bestfreq = fmul;
-			}
-		/* Try multiplier 144 */
-		fmul = fdiv * 144;
-		if ((fdiv >= 390000) && (fdiv <= 667000))
-			if (!max310x_update_best_err(fmul, &besterr)) {
-				pllcfg = (3 << 6) | div;
-				bestfreq = fmul;
-			}
-	}
-
-	/* Configure clock source */
-	clksrc = xtal ? MAX310X_CLKSRC_CRYST_BIT : MAX310X_CLKSRC_EXTCLK_BIT;
-
-	/* Configure PLL */
-	if (pllcfg) {
-		clksrc |= MAX310X_CLKSRC_PLL_BIT;
-		spi_write( MAX310X_PLLCFG_REG, pllcfg);
-	} else
-		clksrc |= MAX310X_CLKSRC_PLLBYP_BIT;
-
-	spi_write( MAX310X_CLKSRC_REG, clksrc);
-
-	/* Wait for crystal */
-	if (pllcfg && xtal)
-		delay_ms(10);
-
-	return (int)bestfreq;
-}
-void spi_update_bits(uint8_t reg, uint8_t mask, uint8_t val)
-{
-	uint8_t tmp, orig;
-	spi_read(reg, &orig);
-
-	tmp = orig & ~mask;
-    tmp |= val & mask;
-
-	if (tmp != orig)
-		spi_write(reg, tmp);
-}
-int max310x_set_baud(int port,int baud)
-{
-	unsigned int mode = 0, clk = max18430_xtal, div = clk / baud;
-
-	/* Check for minimal value for divider */
-	if (div < 16)
-		div = 16;
-
-	if (clk % baud && (div / 16) < 0x8000) {
-		/* Mode x2 */
-		mode = MAX310X_BRGCFG_2XMODE_BIT;
-		clk = max18430_xtal * 2;
-		div = clk / baud;
-
-		if (clk % baud && (div / 16) < 0x8000) {
-			/* Mode x4 */
-			mode = MAX310X_BRGCFG_4XMODE_BIT;
-			clk = max18430_xtal * 4;
-			div = clk / baud;
-		}
-	}
-
-	spi_write( MAX310X_BRGDIVMSB_REG + port*0x20, (div / 16) >> 8);
-	spi_write( MAX310X_BRGDIVLSB_REG + port*0x20, div / 16);
-	spi_write( MAX310X_BRGCFG_REG + port*0x20, (div % 16) | mode);
-
-	return DIV_ROUND_CLOSEST(clk, div);
-}
-
-#if 1
-void max310x_set_termios(int port,
-				uint8_t lcr,
-				uint8_t xon1,
-				uint8_t xoff1,
-				uint8_t flow,
-				int baud)
-{
-#if 1
-	spi_write(MAX310X_LCR_REG + port*0x20, lcr);
-	spi_write(MAX310X_XON1_REG + port*0x20, xon1);
-	spi_write(MAX310X_XOFF1_REG + port*0x20, xoff1);
-	spi_write(MAX310X_FLOWCTRL_REG + port*0x20, flow);
-	max310x_set_baud(port, baud);
-#else
-	unsigned int lcr, flow = 0;
-	int baud;
-
-	/* Mask termios capabilities we don't support */
-	termios->c_cflag &= ~CMSPAR;
-
-	/* Word size */
-	switch (termios->c_cflag & CSIZE) {
-	case CS5:
-		lcr = MAX310X_LCR_WORD_LEN_5;
-		break;
-	case CS6:
-		lcr = MAX310X_LCR_WORD_LEN_6;
-		break;
-	case CS7:
-		lcr = MAX310X_LCR_WORD_LEN_7;
-		break;
-	case CS8:
-	default:
-		lcr = MAX310X_LCR_WORD_LEN_8;
-		break;
-	}
-
-	/* Parity */
-	if (termios->c_cflag & PARENB) {
-		lcr |= MAX310X_LCR_PARITY_BIT;
-		if (!(termios->c_cflag & PARODD))
-			lcr |= MAX310X_LCR_EVENPARITY_BIT;
-	}
-
-	/* Stop bits */
-	if (termios->c_cflag & CSTOPB)
-		lcr |= MAX310X_LCR_STOPLEN_BIT; /* 2 stops */
-
-	/* Update LCR register */
-	max310x_port_write(port, MAX310X_LCR_REG, lcr);
-
-	/* Set read status mask */
-	port->read_status_mask = MAX310X_LSR_RXOVR_BIT;
-	if (termios->c_iflag & INPCK)
-		port->read_status_mask |= MAX310X_LSR_RXPAR_BIT |
-					  MAX310X_LSR_FRERR_BIT;
-	if (termios->c_iflag & (IGNBRK | BRKINT | PARMRK))
-		port->read_status_mask |= MAX310X_LSR_RXBRK_BIT;
-
-	/* Set status ignore mask */
-	port->ignore_status_mask = 0;
-	if (termios->c_iflag & IGNBRK)
-		port->ignore_status_mask |= MAX310X_LSR_RXBRK_BIT;
-	if (!(termios->c_cflag & CREAD))
-		port->ignore_status_mask |= MAX310X_LSR_RXPAR_BIT |
-					    MAX310X_LSR_RXOVR_BIT |
-					    MAX310X_LSR_FRERR_BIT |
-					    MAX310X_LSR_RXBRK_BIT;
-
-	/* Configure flow control */
-	max310x_port_write(port, MAX310X_XON1_REG, termios->c_cc[VSTART]);
-	max310x_port_write(port, MAX310X_XOFF1_REG, termios->c_cc[VSTOP]);
-	if (termios->c_cflag & CRTSCTS)
-		flow |= MAX310X_FLOWCTRL_AUTOCTS_BIT |
-			MAX310X_FLOWCTRL_AUTORTS_BIT;
-	if (termios->c_iflag & IXON)
-		flow |= MAX310X_FLOWCTRL_SWFLOW3_BIT |
-			MAX310X_FLOWCTRL_SWFLOWEN_BIT;
-	if (termios->c_iflag & IXOFF)
-		flow |= MAX310X_FLOWCTRL_SWFLOW1_BIT |
-			MAX310X_FLOWCTRL_SWFLOWEN_BIT;
-	max310x_port_write(port, MAX310X_FLOWCTRL_REG, flow);
-
-	/* Get baud rate generator configuration */
-	baud = uart_get_baud_rate(port, termios, old,
-				  port->uartclk / 16 / 0xffff,
-				  port->uartclk / 4);
-
-	/* Setup baudrate generator */
-	baud = max310x_set_baud(port, baud);
-
-	/* Update timeout according to new baud rate */
-	uart_update_timeout(port, termios->c_cflag, baud);
-#endif
-}
-#endif
-int max310x_startup(int port)
-{
-	uint8_t val;
-
-	/* Configure MODE1 register */
-	spi_update_bits( MAX310X_MODE1_REG + port*0x20,
-			    MAX310X_MODE1_TRNSCVCTRL_BIT, 0);
-
-	/* Configure MODE2 register & Reset FIFOs*/
-	val = MAX310X_MODE2_RXEMPTINV_BIT | MAX310X_MODE2_FIFORST_BIT;
-	spi_write( MAX310X_MODE2_REG + port*0x20, val);
-	spi_update_bits( MAX310X_MODE2_REG + port*0x20,
-			    MAX310X_MODE2_FIFORST_BIT, 0);
-
-	/* Configure flow control levels */
-	/* Flow control halt level 96, resume level 48 */
-	spi_write( MAX310X_FLOWLVL_REG + port*0x20,
-			   MAX310X_FLOWLVL_RES(48) | MAX310X_FLOWLVL_HALT(96));
-
-	/* Clear IRQ status register */
-	spi_read(MAX310X_IRQSTS_REG + port*0x20, &val);
-
-	/* Enable RX, TX, CTS change interrupts */
-	val = MAX310X_IRQ_RXEMPTY_BIT | MAX310X_IRQ_TXEMPTY_BIT/* | MAX310X_IRQ_LSR_BIT*/;
-	spi_write( MAX310X_IRQEN_REG + port*0x20, val | MAX310X_IRQ_CTS_BIT);
-
-	//spi_write(MAX310X_LSR_IRQEN_REG + port*0x20, 0x3f);
-	return 0;
-}
-unsigned int max310x_tx_empty(int port)
-{
-	uint8_t lvl, sts;
-
-	spi_read(MAX310X_TXFIFOLVL_REG + port*0x20, &lvl);
-	spi_read(MAX310X_IRQSTS_REG + port*0x20, &sts);
-
-	return ((sts & MAX310X_IRQ_TXEMPTY_BIT) && !lvl) ? 1 : 0;
-}
-int max14830_tx(int port, unsigned char *buf, int len)
-{
-		uint8_t txlen,to_send;
-		int i=0;
-		while(1) {
-			spi_read(MAX310X_TXFIFOLVL_REG+port*0x20,&txlen);
-			//printf("port %d fifo len %d\r\n",port,txlen);
-			txlen = MAX310X_FIFO_SIZE - txlen;
-			to_send = (len > txlen) ? txlen : len;
-
-			//printf("port %d sending %d bytes, %d\r\n",port,to_send,len-to_send);
-			len=len-to_send;
-			while (to_send--) {
-				spi_write(MAX310X_THR_REG+port*0x20,
-						   buf[i]);
-				i++;
-			}
-			if(len<=0)
-			{
-				//printf("port %d tx done\r\n",port);
-				break;
-			}
-			else
-			{
-				delay_ms(10);
-			}
-		}
-		return (len > txlen) ? txlen : len;
-}
-void max14830_rx(int port, unsigned char *buf, unsigned int rxlen)
-{
-	unsigned char ch;
-	int i = 0;
-
-	printf("port %d ,rx %d bytes\r\n",port,rxlen);
-	while (rxlen--) {
-		spi_read(MAX310X_RHR_REG + port*0x20, &ch);
-		buf[i]=ch;
-		i++;
-		//printf("%x ",ch);
-		}
-	//printf("\r\n");
-}
-
-void max14830_init()
-{
-	int i,uartclk;
-	unsigned long freq = max18430_xtal;
-	bool xtal = true;
-	uint8_t ret;
-	Spi_Init();
-	if(max14830_detect()) {
-		printf("Can't find max14830\n");
-		return ;
-	}
-	for (i = 0; i < 4; i++) {
-		unsigned int offs = i << 5;
-
-		/* Reset port */
-		spi_write( MAX310X_MODE2_REG + offs,
-				 MAX310X_MODE2_RST_BIT);
-		/* Clear port reset */
-		spi_write( MAX310X_MODE2_REG + offs, 0);
-
-		/* Wait for port startup */
-		do {
-			spi_read(
-					MAX310X_BRGDIVLSB_REG + offs, &ret);
-		} while (ret != 0x01);
-
-		spi_update_bits(MAX310X_MODE1_REG + offs,
-				   MAX310X_MODE1_AUTOSLEEP_BIT,
-				   MAX310X_MODE1_AUTOSLEEP_BIT);
-	}
-	uartclk = max310x_set_ref_clk(freq, xtal);
-	printf("Reference clock set to %i Hz\r\n", uartclk);
-
-	for (i = 0; i < 4; i++) {
-		unsigned int offs = i << 5;
-		/* Disable all interrupts */
-		spi_write(MAX310X_IRQEN_REG + offs, 0);
-		/* Clear IRQ status register */
-		spi_read(MAX310X_IRQSTS_REG + offs, &ret);
-		/* Enable IRQ pin */
-		spi_update_bits(MAX310X_MODE1_REG + offs,
-				    MAX310X_MODE1_IRQSEL_BIT,
-				    MAX310X_MODE1_IRQSEL_BIT);
-		
-		max310x_set_termios(
-			i, 
-			MAX310X_LCR_WORD_LEN_8,
-			0x00,
-			0x00,
-			0x00,
-			115200);
-		max310x_startup(i);
-	}
-	max14830_int_init();
-}
-void EXTI9_5_IRQHandler(void)
-{
-	int i;
-	if(EXTI_GetITStatus(EXTI_Line5) != RESET)
+	/* Enable the LSE OSC */
+	RCC_LSEConfig(RCC_LSE_ON);
+	/* Wait till LSE is ready */
+	while(RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET)
 	{
-		for (i = 0; i < 4; i++) {
-			do {
-				unsigned char ists, lsr, rxlen;
+	}
 
-				/* Read IRQ status & RX FIFO level */
-				spi_read( MAX310X_IRQSTS_REG+i*0x20, &ists);
-				spi_read( MAX310X_RXFIFOLVL_REG+i*0x20, &rxlen);
-				if (!ists && !rxlen)
-					break;
+	/* Select the RTC Clock Source */
+	RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);
 
-				printf("port %d irq ists %x, rxlen %d \r\n",i,ists,rxlen);
+	/* Enable the RTC Clock */
+	RCC_RTCCLKCmd(ENABLE);
 
-				if (ists & (MAX310X_IRQ_CTS_BIT|MAX310X_IRQ_LSR_BIT)) {
-					spi_read( MAX310X_LSR_IRQSTS_REG+i*0x20, &lsr);
-					printf("port %d irq lsr %x\r\n",i,lsr);
-					//uart_handle_cts_change(port,
-					//			   !!(lsr & MAX310X_LSR_CTS_BIT));
-				}
+	/* RTC configuration -------------------------------------------------------*/
+	/* Wait for RTC APB registers synchronisation */
+	RTC_WaitForSynchro();
 
-				
-				if (rxlen)
-					max14830_rx(i, buf, rxlen);
-				if (ists & MAX310X_IRQ_TXEMPTY_BIT) {
-					//printf("port %d send done\r\n",i);
-				}
-			} while (1);
-		}
+	/* Set the RTC time base to 1s */
+	RTC_SetPrescaler(32767);	
+	/* Wait until last write operation on RTC registers has finished */
+	RTC_WaitForLastTask();
 
-		/* Clear the  EXTI line 8 pending bit */
-		EXTI_ClearITPendingBit(EXTI_Line5);
+	/* Enable the RTC Alarm interrupt */
+	RTC_ITConfig(RTC_IT_ALR, ENABLE);
+	/* Wait until last write operation on RTC registers has finished */
+	RTC_WaitForLastTask();
+
+}
+void SYSCLKConfig_STOP(void)
+{
+	ErrorStatus HSEStartUpStatus;
+  /* Enable HSE */
+  RCC_HSEConfig(RCC_HSE_ON);
+
+  /* Wait till HSE is ready */
+  HSEStartUpStatus = RCC_WaitForHSEStartUp();
+
+  if(HSEStartUpStatus == SUCCESS)
+  {
+
+    /* Enable PLL */ 
+    RCC_PLLCmd(ENABLE);
+
+    /* Wait till PLL is ready */
+    while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET)
+    {
+    }
+
+    /* Select PLL as system clock source */
+    RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+
+    /* Wait till PLL is used as system clock source */
+    while(RCC_GetSYSCLKSource() != 0x08)
+    {
+    }
+  }
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
+	{
+		/* infrar */
+		EXTI_ClearITPendingBit(EXTI_Line13);
+		key |= KEY_INFRAR;
+		ctl_int(EXTI_Line13,0);
 	}
 	
+	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
+	{
+		/* S1 key*/
+		EXTI_ClearITPendingBit(EXTI_Line12);
+		key |= KEY_S1;
+		ctl_int(EXTI_Line12,0);
+	}
+
+	if(EXTI_GetITStatus(EXTI_Line10) != RESET)
+	{
+		/* S1 key*/
+		EXTI_ClearITPendingBit(EXTI_Line10);
+		key |= KEY_CAN;
+		ctl_int(EXTI_Line10,0);
+	}
 }
+void RTCAlarm_IRQHandler(void)
+{
+  if(RTC_GetITStatus(RTC_IT_ALR) != RESET)
+  {
+
+    /* Clear EXTI line17 pending bit */
+    EXTI_ClearITPendingBit(EXTI_Line17);
+
+    /* Check if the Wake-Up flag is set */
+    if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
+    {
+      /* Clear Wake Up flag */
+      PWR_ClearFlag(PWR_FLAG_WU);
+    }
+
+    /* Wait until last write operation on RTC registers has finished */
+    RTC_WaitForLastTask();   
+    /* Clear RTC Alarm interrupt pending bit */
+    RTC_ClearITPendingBit(RTC_IT_ALR);
+    /* Wait until last write operation on RTC registers has finished */
+    RTC_WaitForLastTask();
+	key |= KEY_TIMER;
+  }
+}
+
+/*
+  	msp430 -> stm32 
+	0x01 can_addr 0x6c 0xaa data_len stm32_id msp430_id cmd_type sub_cmd_type device_type battery crc
+*/
+void handle_can_addr(uint8_t *id, uint8_t res) 
+{	
+	unsigned char cmd[32] = {0x00};
+	unsigned char ofs = 0;
+	cmd[0] = STM32_ADDR;cmd[1] = can_addr;
+	cmd[2] = MSG_HEAD0;cmd[3] = MSG_HEAD1;
+	ofs = 5;
+	if (id == NULL) 
+		memset(cmd+ofs, 0, STM32_CODE_LEN);
+	else
+		memcpy(cmd+ofs, id, STM32_CODE_LEN);
+	ofs += STM32_CODE_LEN;	
+	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
+	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
+	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
+	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
+	if (id == NULL) {
+		cmd[ofs++] = (CMD_REG_CODE >> 8) & 0xff;
+		cmd[ofs++] = CMD_REG_CODE & 0xff;
+		cmd[ofs++] = DEVICE_TYPE;
+		cmd[ofs++] = DEVICE_MODE;
+	} else {		
+		cmd[ofs++] = (CMD_CONFIRM_CODE >> 8) & 0xff;
+		cmd[ofs++] = CMD_CONFIRM_CODE & 0xff;
+		cmd[ofs++] = res;
+		cmd[ofs++] = can_addr;
+	}
+	unsigned short bat = 0;//read_adc();
+	cmd[ofs++] = (bat >> 8) & 0xff;
+	cmd[ofs++] = (bat) & 0xff;
+	cmd[4] = ofs-3; 
+	unsigned short crc = Packet_CRC(cmd, ofs);
+	cmd[ofs++] = (crc >> 8) & 0xff;
+	cmd[ofs++] = (crc) & 0xff;
+//	can_send(cmd, ofs);
+}
+void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd) 
+{	
+	unsigned char cmd[32] = {0x00};
+	unsigned char ofs = 0;
+	cmd[0] = STM32_ADDR;cmd[1] = can_addr;
+	cmd[2] = MSG_HEAD0;cmd[3] = MSG_HEAD1;
+	ofs = 5;
+	memcpy(cmd+ofs, stm32_id, STM32_CODE_LEN);	
+	ofs += STM32_CODE_LEN;
+	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
+	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
+	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
+	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
+	cmd[ofs++] = (main_cmd >> 8) & 0xff;
+	cmd[ofs++] = main_cmd & 0xff;
+	cmd[ofs++] = sub_cmd;
+
+	if (main_cmd == CMD_ALARM) {
+		if (sub_cmd == 0x01)
+			last_sub_cmd |= 0x02;
+		else if(sub_cmd == 0x02)
+			last_sub_cmd |= 0x01;
+	} else if (main_cmd == CMD_LOW_POWER) {
+		last_sub_cmd |= 0x04;
+	} else if (main_cmd == CMD_CUR_STATUS) {
+		last_sub_cmd |= 0x08;
+	}
+	
+	cmd[ofs++] = DEVICE_TYPE;
+	unsigned short bat = 0;//read_adc();
+	//if (b_protection_state)
+	//	ca_ctl(1);
+	cmd[ofs++] = (bat >> 8) & 0xff;
+	cmd[ofs++] = (bat) & 0xff;	
+	cmd[4] = ofs-3; 
+	unsigned short crc = Packet_CRC(cmd, ofs);
+	cmd[ofs++] = (crc >> 8) & 0xff;
+	cmd[ofs++] = (crc) & 0xff;
+//	can_send(cmd, ofs);
+}
+
+void switch_protect(unsigned char state)
+{
+	b_protection_state = state;
+	if (b_protection_state) {
+		/*switch to protect on*/
+		//timer off
+		//infrar int on
+		ctl_int(EXTI_Line13, 1);
+		GPIO_SetBits(GPIOA,GPIO_Pin_2);
+		led(1);
+	} else {
+		/*switch to protect off*/
+		//timer on
+		//infrar int off
+		//TACTL = TASSEL_1 + MC_2 + TAIE + ID0;
+		ctl_int(EXTI_Line13,0);
+		GPIO_ResetBits(GPIOA,GPIO_Pin_2);
+		led(0);
+	}				
+}
+/*	
+	stm32 -> msp430
+	can_addr 0x01 0x6c 0xaa data_len stm32_id msp430_id cmd_type sub_cmd_type result/protect_status crc
+*/
+void handle_can_resp()
+{
+	unsigned char resp[32] = {0};
+	unsigned char len = 32;
+	unsigned short cmd_type = 0;
+	int result = 0;//can_read(resp, &len);
+	if (result !=0 && len > 0) {
+		if (resp[2] != MSG_HEAD0 || resp[3] != MSG_HEAD1)
+			return ;		
+		if (resp[4] != len -5)
+			return ;
+		/*check subdevice id = local device id*/
+		if (ID_CODE !=((resp[11]<<24)|(resp[12]<<16)|(resp[13]<<8)|(resp[14]<<0)))
+			return ;
+		/*check stm32 id = saved stm32 id*/
+		if (memcmp(stm32_id , zero_id, STM32_CODE_LEN) !=0) {
+			if (memcmp(stm32_id, resp+5, STM32_CODE_LEN) !=0 && g_state !=STATE_ASK_CC1101_ADDR)
+				return ;
+		}
+		len = resp[4];
+		unsigned short crc = Packet_CRC(resp, len+3);
+		/*check crc*/
+		if (crc != (resp[len+3] << 8 | resp[len+4]))
+			return ;
+		
+	cmd_type = resp[15]<<8 | resp[16];
+	switch (cmd_type) {
+		case CMD_REG_CODE_ACK:	
+			if (resp[len+2] != 0x00 && can_addr == 0) {/*if get vaild addr && curr addr ==0*/
+				memcpy(stm32_id, resp+5, STM32_CODE_LEN);
+				can_addr = resp[18];				
+				g_state = STATE_PROTECT_ON;
+			}
+			break;
+		
+		case CMD_ALARM_ACK:
+			if (b_protection_state != resp[len+2]) {
+				switch_protect(resp[len+2]);
+			}
+			switch (resp[len+1]) {
+				case 0x01:
+					last_sub_cmd &= ~0x02;
+					break;
+				case 0x02:
+					last_sub_cmd &= ~0x01;
+					break;
+				default:
+					break;		
+			}
+			break;
+		case CMD_LOW_POWER_ACK:
+		case CMD_CUR_STATUS_ACK:
+			if (b_protection_state != resp[len+2]) {
+				switch_protect(resp[len+2]);
+			}
+			if (cmd_type == CMD_LOW_POWER_ACK)
+				last_sub_cmd &= ~0x04;
+			if (cmd_type == CMD_CUR_STATUS_ACK)
+				last_sub_cmd &= ~0x08;
+			break;
+		default:
+			break;
+	}
+
+	}
+}
+void handle_timer()
+{
+	if (g_state == STATE_ASK_CC1101_ADDR)
+		handle_can_addr(NULL, 0);
+	else {
+		if (last_sub_cmd & 0x01)
+			handle_can_cmd(CMD_ALARM,0x02);
+		if (b_protection_state) {
+			if (last_sub_cmd & 0x02)
+				handle_can_cmd(CMD_ALARM,0x01);
+		} else {
+			last_sub_cmd &= ~0x02;
+		}
+
+		if (last_sub_cmd & 0x04)
+			handle_can_cmd(CMD_LOW_POWER,0x00);
+	}
+
+    RTC_ClearFlag(RTC_FLAG_SEC);
+    while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
+
+    RTC_SetAlarm(RTC_GetCounter()+ 5);
+    RTC_WaitForLastTask();
+
+	//unsigned short bat = read_adc();
+	//if (bat < MIN_BAT)
+	//	handle_can_cmd(CMD_LOW_POWER,0x00);
+}
+void task()
+{		
+	led(1);
+	delay_ms(1000);
+	led(0);	
+	delay_ms(1000);
+	led(1);
+	delay_ms(1000);
+	led(0);
+	handle_can_addr(NULL, 0);
+	while (1) {
+		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+		SYSCLKConfig_STOP();
+		
+		if (key & KEY_TIMER) {
+			key &= ~KEY_TIMER;
+			handle_timer();
+		}
+
+		if (key & KEY_S1) {
+			key &= ~KEY_S1;
+			/*send s1 alarm to stm32*/
+			handle_can_cmd(CMD_ALARM, 0x02);
+			ctl_int(EXTI_Line12,0);
+		}
+
+		if (key & KEY_INFRAR) {
+			key &= ~KEY_INFRAR;
+			/*send infrar alarm to stm32*/
+			//add int count then make decision
+			if (b_protection_state)
+			handle_can_cmd(CMD_ALARM, 0x01);
+			ctl_int(EXTI_Line13,1);
+		}
+
+		if (key & KEY_CAN) {
+			key &= ~KEY_CAN;
+			/*new data come from stm32*/
+			handle_can_resp();
+			ctl_int(EXTI_Line10,1);
+		}
+	}
+	return ;
+}
+
 int main(void)
 {	
-	int i=0;
 	led_init();
 	delay_init(72);
 	SWO_Enable();
 	Debug_uart_Init();
-	max14830_init();
-	for(i=0;i<1024;i++)
-		buf[i]=i;
-	i=0;
-	while(1)
-	{
-		max14830_tx(i,buf,1000);
-		GPIO_SetBits(GPIOA,GPIO_Pin_5);
-		delay_ms(1000);
-		GPIO_ResetBits(GPIOA,GPIO_Pin_5);
-		delay_ms(1000);
-		i++;
-		if(i==4)
-			i=0;
-	}
-	
+	int_init();
+	task();
 }

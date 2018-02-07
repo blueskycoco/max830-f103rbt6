@@ -64,6 +64,7 @@ ${COMPILER}/infrar.axf: ${COMPILER}/startup_${COMPILER}_103c8t6.o
 ${COMPILER}/infrar.axf: ${COMPILER}/system_stm32f10x.o
 ${COMPILER}/infrar.axf: ${COMPILER}/infrar.o
 ${COMPILER}/infrar.axf: ${COMPILER}/syscalls.o
+${COMPILER}/infrar.axf: ${COMPILER}/mymisc.o
 ${COMPILER}/infrar.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/infrar.axf: infrar.ld
 SCATTERgcc_infrar=infrar.ld
