@@ -78,9 +78,15 @@ void led_init()
 void led(int on)
 {
 	if (on)
-		GPIO_ResetBits(GPIOB,GPIO_Pin_14);
+	{
+		GPIO_ResetBits(GPIOB,GPIO_Pin_14);		
+		GPIO_SetBits(GPIOB,GPIO_Pin_15);
+	}
 	else
+	{
 		GPIO_SetBits(GPIOB,GPIO_Pin_14);
+		GPIO_ResetBits(GPIOB,GPIO_Pin_15);
+	}
 }
 
 unsigned short Packet_CRC(unsigned char *Data,unsigned char Data_length)

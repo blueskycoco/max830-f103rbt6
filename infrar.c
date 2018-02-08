@@ -349,6 +349,14 @@ void handle_can_resp()
 
 	}
 }
+
+void reconfig_rtc()
+{
+	 RTC_ClearFlag(RTC_FLAG_SEC);
+	 while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
+	 RTC_SetAlarm(RTC_GetCounter()+ 5);
+	 RTC_WaitForLastTask();
+}
 void handle_timer()
 {
 	if (g_state == STATE_ASK_CC1101_ADDR)
@@ -366,17 +374,8 @@ void handle_timer()
 		if (last_sub_cmd & 0x04)
 			handle_can_cmd(CMD_LOW_POWER,0x00);
 	}
-printf("handle timer 1\r\n");
-    RTC_ClearFlag(RTC_FLAG_SEC);
-printf("handle timer 2\r\n");
-    while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
-printf("handle timer 3\r\n");
-
-    RTC_SetAlarm(RTC_GetCounter()+ 5);
-printf("handle timer 4\r\n");
-    RTC_WaitForLastTask();
-printf("handle timer 5\r\n");
-
+	reconfig_rtc();
+ 
 	//unsigned short bat = read_adc();
 	//if (bat < MIN_BAT)
 	//	handle_can_cmd(CMD_LOW_POWER,0x00);
@@ -392,22 +391,19 @@ void task()
 	led(0);
 	printf("begin to ask addr\r\n");
 	handle_can_addr(NULL, 0);
-	RTC_ClearFlag(RTC_FLAG_SEC);
-    while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
-
-    /* Set the RTC Alarm after 3s */
-    RTC_SetAlarm(RTC_GetCounter()+ 5);
-    /* Wait until last write operation on RTC registers has finished */
-    RTC_WaitForLastTask();
+	reconfig_rtc();
+	
 	while (1) {
+		led(0);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 		SYSCLKConfig_STOP();
 		__disable_irq();
+		led(1);
 		printf("wake from stop\r\n");
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
 			printf("handle timer\r\n");
-			//handle_timer();
+			handle_timer();
 		}
 		#if 1
 		if (key & KEY_S1) {
@@ -434,7 +430,7 @@ void task()
 		}
 		#endif
 		printf("goto stop\r\n");
-		delay_ms(1000);
+		delay_ms(10);
 		__enable_irq();
 	}
 	return ;
