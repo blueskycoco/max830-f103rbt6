@@ -390,9 +390,9 @@ void task()
 	delay_ms(1000);
 	led(0);
 	printf("begin to ask addr\r\n");
+	while(1) delay_ms(1000);
 	handle_can_addr(NULL, 0);
 	reconfig_rtc();
-	
 	while (1) {
 		led(0);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
@@ -417,7 +417,7 @@ void task()
 			key &= ~KEY_INFRAR;
 			/*send infrar alarm to stm32*/
 			//add int count then make decision
-			//if (b_protection_state)
+			if (b_protection_state)
 			handle_can_cmd(CMD_ALARM, 0x01);
 			//ctl_int(EXTI_Line13,1);
 		}
@@ -430,7 +430,7 @@ void task()
 		}
 		#endif
 		printf("goto stop\r\n");
-		delay_ms(10);
+		//delay_ms(10);
 		__enable_irq();
 	}
 	return ;

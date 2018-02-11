@@ -25,15 +25,19 @@ CanTxMsg TxMessage;
 #define GPIO_Pin_CAN_RX 		   GPIO_Pin_CAN1_RX
 #define GPIO_Pin_CAN_TX 		   GPIO_Pin_CAN1_TX
 
-//void CAN1_RX0_IRQHandler(void)
-//{
-//  CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
-//  if ((RxMessage.StdId == 0x321)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 1))
-//  {
+void CAN1_RX0_IRQHandler(void)
+{
+  CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
+  printf("DLC %x, ExtId %x, FMI %x, IDE %x, RTR %x, StdId %x\r\n",
+  	RxMessage.DLC,RxMessage.ExtId,RxMessage.FMI,RxMessage.IDE,RxMessage.RTR,RxMessage.StdId);
+  if ((RxMessage.StdId == 0x001)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 8))
+  {
 	//LED_Display(RxMessage.Data[0]);
 	//KeyNumber = RxMessage.Data[0];
-//  }
-//}
+	printf("we got message %02x %02x %02x %02x %02x %02x %02x %02x\r\n", RxMessage.Data[0],RxMessage.Data[1],RxMessage.Data[2]
+	,RxMessage.Data[3],RxMessage.Data[4],RxMessage.Data[5],RxMessage.Data[6],RxMessage.Data[7]);
+  }
+}
 int can_send(unsigned char *payload, unsigned char payload_len)
 {
 	int i;
@@ -42,17 +46,26 @@ int can_send(unsigned char *payload, unsigned char payload_len)
 	for (i=0;i<payload_len;i++)
 		printf("%02x ", payload[i]);
 	printf("\r\n");
-	CAN_Transmit(CANx, &TxMessage);
+	uint8_t TransmitMailbox = CAN_Transmit(CANx, &TxMessage);
+	i = 0;
+    while((CAN_TransmitStatus(CANx, TransmitMailbox) != CANTXOK) && (i != 0xFFFF))
+    {
+      i++;
+    }
 	return 1;
 }
 int can_read(unsigned char *buf, unsigned char *buf_len)
 {
 	*buf_len = 0;
 	CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
-	if ((RxMessage.StdId == 0x321)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 1))
-  	{
-		memcpy(buf, RxMessage.Data, 8);
+	printf("DLC %x, ExtId %x, FMI %x, IDE %x, RTR %x, StdId %x\r\n",
+	  RxMessage.DLC,RxMessage.ExtId,RxMessage.FMI,RxMessage.IDE,RxMessage.RTR,RxMessage.StdId);
+	if ((RxMessage.StdId == 0x001)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 8))
+	{
+	 	memcpy(buf, RxMessage.Data, 8);
 		*buf_len = 8;
+	  printf("we got message %02x %02x %02x %02x %02x %02x %02x %02x\r\n", RxMessage.Data[0],RxMessage.Data[1],RxMessage.Data[2]
+	  ,RxMessage.Data[3],RxMessage.Data[4],RxMessage.Data[5],RxMessage.Data[6],RxMessage.Data[7]);
 	}
 	return 1;
 }
@@ -70,8 +83,6 @@ void can_init()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
-
-	CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 
 	/* GPIO clock enable */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
@@ -126,11 +137,11 @@ void can_init()
 	CAN_FilterInit(&CAN_FilterInitStructure);
 
 	/* Transmit */
-	TxMessage.StdId = 0x321;
-	TxMessage.ExtId = 0x01;
+	TxMessage.StdId = 0x001;
+	TxMessage.ExtId = 0x00;
 	TxMessage.RTR = CAN_RTR_DATA;
 	TxMessage.IDE = CAN_ID_STD;
-	TxMessage.DLC = 1;
+	TxMessage.DLC = 8;
 
 
 	RxMessage.StdId = 0x00;
@@ -142,4 +153,6 @@ void can_init()
 	{
 		RxMessage.Data[i] = 0x00;
 	}
+
+	CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 }
