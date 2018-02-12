@@ -41,6 +41,7 @@ void CAN1_RX0_IRQHandler(void)
 int can_send(unsigned char *payload, unsigned char payload_len)
 {
 	int i;
+	uint8_t status;
 	memcpy(TxMessage.Data, payload, 8);
 	printf("CAN send:\r\n");
 	for (i=0;i<payload_len;i++)
@@ -48,8 +49,9 @@ int can_send(unsigned char *payload, unsigned char payload_len)
 	printf("\r\n");
 	uint8_t TransmitMailbox = CAN_Transmit(CANx, &TxMessage);
 	i = 0;
-    while((CAN_TransmitStatus(CANx, TransmitMailbox) != CANTXOK) && (i != 0xFFFF))
+    while(((status = CAN_TransmitStatus(CANx, TransmitMailbox)) != CANTXOK) && (i != 0xFFFF))
     {
+    	//printf("status %x %x %x\r\n",TransmitMailbox,status,i);
       i++;
     }
 	return 1;
