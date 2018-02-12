@@ -64,7 +64,7 @@ int can_read(unsigned char *buf, unsigned char *buf_len)
 void set_id(unsigned short id)
 {
 
-	CAN_FilterInitStructure.CAN_FilterNumber = 1;
+	CAN_FilterInitStructure.CAN_FilterNumber = 0;
 	CAN_FilterInitStructure.CAN_FilterMode = CAN_FilterMode_IdMask;
 	CAN_FilterInitStructure.CAN_FilterScale = CAN_FilterScale_32bit;
 	CAN_FilterInitStructure.CAN_FilterIdHigh = (id & 0x3ff) << 5;//0x0040;

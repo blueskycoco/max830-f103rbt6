@@ -58,7 +58,7 @@ void int_init()
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_13;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_7;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
@@ -66,8 +66,9 @@ void int_init()
 
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource7);
 
-	EXTI_InitStructure.EXTI_Line = EXTI_Line12|EXTI_Line13;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line12|EXTI_Line13|EXTI_Line7;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -80,6 +81,8 @@ void int_init()
 
 	NVIC_Init(&NVIC_InitStructure);
 	
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+	NVIC_Init(&NVIC_InitStructure);
 	/* Configure EXTI Line17(RTC Alarm) to generate an interrupt on rising edge */
 	EXTI_ClearITPendingBit(EXTI_Line17);
 	EXTI_InitStructure.EXTI_Line = EXTI_Line17;
@@ -159,40 +162,71 @@ void SYSCLKConfig_STOP(void)
     }
   }
 }
-
+void EXTI9_5_IRQHandler(void)
+{
+	if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
+    {
+      /* Clear Wake Up flag */
+      PWR_ClearFlag(PWR_FLAG_WU);
+	  //SYSCLKConfig_STOP();
+    }
+	if(EXTI_GetITStatus(EXTI_Line7) != RESET)
+	{
+		/* S1 key*/
+		key |= KEY_CAN;
+		can_rcv = 1;
+		//ctl_int(EXTI_Line7,0);
+		printf("exti 7\r\n");
+		#ifndef MASTER
+		//handle_can_resp();
+		#endif
+		EXTI_ClearITPendingBit(EXTI_Line7);
+	}
+}
 void EXTI15_10_IRQHandler(void)
 {
+	int i;
+	unsigned char cmd[8] = {0};
+	if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
+    {
+      /* Clear Wake Up flag */
+      PWR_ClearFlag(PWR_FLAG_WU);
+	  //SYSCLKConfig_STOP();
+    }
 	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
 	{
+	#ifndef MASTER
 		/* infrar */
 		key |= KEY_INFRAR;
+		printf("infrar int\r\n");
+		if (b_protection_state)
+			handle_can_cmd(CMD_ALARM, 0x01);
+		#endif
 		EXTI_ClearITPendingBit(EXTI_Line13);
-		//ctl_int(EXTI_Line13,0);
 	}
 	
 	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
 	{
 		/* S1 key*/
 		key |= KEY_S1;
-		EXTI_ClearITPendingBit(EXTI_Line12);
 		can_broadcast = 1;
-		protect_status = !protect_status;
-		//ctl_int(EXTI_Line12,0);
+		protect_status = !protect_status;		
+		#ifndef MASTER
+		printf("s1 int\r\n");
+		handle_can_cmd(CMD_ALARM, 0x02);
+		#else
+		cmd[0] = 0x00;cmd[1]=0x11;
+		cmd[2] = 0x00;
+		cmd[3] = protect_status;
+		for (i=3;i<can_addr;i++)
+		{
+			memcpy(cmd+4, addr_buf+i,4);
+			can_send(i,cmd,8);			
+		}
+		#endif
+		EXTI_ClearITPendingBit(EXTI_Line12);
 	}
 
-	if(EXTI_GetITStatus(EXTI_Line10) != RESET)
-	{
-		/* S1 key*/
-		key |= KEY_CAN;
-		EXTI_ClearITPendingBit(EXTI_Line10);
-		//ctl_int(EXTI_Line10,0);
-	}
-	
-    if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
-    {
-      /* Clear Wake Up flag */
-      PWR_ClearFlag(PWR_FLAG_WU);
-    }
 }
 void RTCAlarm_IRQHandler(void)
 {
@@ -207,6 +241,7 @@ void RTCAlarm_IRQHandler(void)
     {
       /* Clear Wake Up flag */
       PWR_ClearFlag(PWR_FLAG_WU);
+	  //SYSCLKConfig_STOP();
     }
 
     /* Wait until last write operation on RTC registers has finished */
@@ -216,6 +251,7 @@ void RTCAlarm_IRQHandler(void)
     /* Wait until last write operation on RTC registers has finished */
     RTC_WaitForLastTask();
 	key |= KEY_TIMER;
+	handle_timer();
   }
 }
 
@@ -237,43 +273,15 @@ uint16_t get_addr_offs(uint32_t id)
 }
 void CAN1_RX0_IRQHandler(void)
 {
-unsigned char resp[8] = {0};
-unsigned char cmd[8] = {0};
-unsigned short stdid;
-unsigned char len;
-uint16_t addr;
-uint32_t id;
-#ifdef MASTER
-  if ((stdid = can_read(resp, &len)) != 0) {
-				  id = resp[4];
-				  id = (id<<8) + resp[5];
-				  id = (id<<8) + resp[6];
-				  id = (id<<8) + resp[7];
-				  addr = get_addr_offs(id);
-				  if (resp[0] == 0x00 && resp[1] == 0x00)
-				  {   //assign can addr
-					  cmd[0] = 0x00;cmd[1]=0x01;
-					  cmd[2] = (addr >> 8) & 0xff;
-					  cmd[3] = addr&0xff;
-					  memcpy(cmd+4, resp+4, 4);
-					  can_send(2,cmd,8);
-				  } else if (resp[0] == 0x00 && resp[1] == 0x06) {
-					  //alarm
-					  cmd[0] = 0x00;cmd[1]=0x07;
-					  cmd[2] = resp[2];
-					  cmd[3] = protect_status;
-					  memcpy(cmd+4, resp+4, 4);
-					  can_send(addr,cmd,8);				  
-				  }
-				  led(1);
-				  delay_ms(1000);
-				  led(0); 
-			  } 	  
-
-#else
+key |= KEY_CAN;
+can_rcv = 1;
+printf("CAN1_RX0_IRQHandler\r\n");
+#ifndef MASTER
 handle_can_resp();
-
+#else
+task_master();
 #endif
+
 }
 
 /*
@@ -380,7 +388,8 @@ void handle_can_resp()
 	cmd_type = resp[0]<<8 | resp[1];
 	switch (cmd_type) {
 		case CMD_REG_CODE_ACK:
-			set_id(resp[2]<<8 | resp[3]);		
+			set_id(resp[2]<<8 | resp[3]);	
+			printf("set new id %d\r\n",resp[2]<<8|resp[3]);
 			g_state = STATE_PROTECT_ON;			
 			break;
 		
@@ -425,6 +434,7 @@ void reconfig_rtc()
 }
 void handle_timer()
 {
+	printf("handle timer in\r\n");
 	if (g_state == STATE_ASK_CC1101_ADDR)
 		handle_can_addr(NULL, 0);
 	else {
@@ -459,12 +469,15 @@ void task()
 	led(0);
 	printf("begin to ask addr\r\n");
 	//while(1) delay_ms(1000);
-	handle_can_addr(NULL, 0);
 	reconfig_rtc();
+	handle_can_addr(NULL, 0);
 	while (1) {
-		led(0);
+		//led(0);
+		//printf("goto stop\r\n");
 		//PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 		//SYSCLKConfig_STOP();
+		//printf("wakeup\r\n");
+		#if 0
 		__disable_irq();
 		led(1);
 		//printf("wake from stop\r\n");
@@ -494,12 +507,14 @@ void task()
 			key &= ~KEY_CAN;
 			/*new data come from stm32*/
 			handle_can_resp();
-			ctl_int(EXTI_Line10,1);
+			//ctl_int(EXTI_Line10,1);
 		}
 		#endif
-		//printf("goto stop\r\n");
+		printf("goto stop\r\n");
+		ctl_int(EXTI_Line7,1);
 		__enable_irq();
-		delay_ms(1000);
+		//delay_ms(1000);
+		#endif
 	}
 	return ;
 }
@@ -515,35 +530,40 @@ void task_master()
 	unsigned char cmd[8] = {0};
 	unsigned char len = 32;
 	unsigned short stdid = 0;
+	uint16_t addr;
+	uint32_t id;
 
-	while (1) {
+	//while (1) {
 		memset(cmd,0,8);
-		if (can_rcv) {
+		//if (can_rcv) {
 			can_rcv = 0;
 			if ((stdid = can_read(resp, &len)) != 0) {
-				if (resp[0] == 0x00 && resp[1] == 0x00)
-				{	//assign can addr
-					cmd[0] = 0x00;cmd[1]=0x01;
-					cmd[2] = (can_addr >> 8) & 0xff;
-					cmd[3] = can_addr&0xff;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(2,cmd,8);
-					delay_ms(2000);
-					can_send(can_addr,cmd,8);
-					can_addr++;
-				} else if (resp[0] == 0x00 && resp[1] == 0x06) {
-					//alarm
-					cmd[0] = 0x00;cmd[1]=0x07;
-					cmd[2] = resp[2];
-					cmd[3] = protect_status;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(stdid,cmd,8);					
-				}
+				  id = resp[4];
+				  id = (id<<8) + resp[5];
+				  id = (id<<8) + resp[6];
+				  id = (id<<8) + resp[7];
+				  addr = get_addr_offs(id);
+				  printf("addr %d, id %08x \r\n",addr,id);
+				  if (resp[0] == 0x00 && resp[1] == 0x00)
+				  {   //assign can addr
+					  cmd[0] = 0x00;cmd[1]=0x01;
+					  cmd[2] = (addr >> 8) & 0xff;
+					  cmd[3] = addr&0xff;
+					  memcpy(cmd+4, resp+4, 4);
+					  can_send(2,cmd,8);
+				  } else if (resp[0] == 0x00 && resp[1] == 0x06) {
+					  //alarm
+					  cmd[0] = 0x00;cmd[1]=0x07;
+					  cmd[2] = resp[2];
+					  cmd[3] = protect_status;
+					  memcpy(cmd+4, resp+4, 4);
+					  can_send(addr,cmd,8);				  
+				  }
 				led(1);
 				delay_ms(1000);
 				led(0);	
 			}			
-		}
+		//}
 
 		if (can_broadcast) {
 			can_broadcast = 0;
@@ -552,7 +572,7 @@ void task_master()
 			cmd[3] = protect_status;
 			can_send(2,cmd,8);					
 		}
-	}
+	//}
 }
 int main(void)
 {	
@@ -563,7 +583,7 @@ int main(void)
 	int_init();
 	can_init();
 	#ifdef MASTER
-	while(1) delay_ms(1000);
+	while(1);//task_master();
 	#else
 	task();
 	#endif
