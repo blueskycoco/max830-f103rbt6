@@ -43,9 +43,12 @@ unsigned char last_sub_cmd = 0x00; /*0x01 s1_alarm, 0x02 infrar_alarm, 0x04 low_
 volatile unsigned char key = 0x0;
 unsigned char stm32_id[STM32_CODE_LEN] = {0};
 unsigned char zero_id[STM32_CODE_LEN] = {0};
-unsigned char can_addr = 0;
+unsigned char can_addr = 3;
+uint32_t addr_buf[1024] = {0};
 #define STM32_ADDR	0x01
-
+unsigned char can_rcv = 0;
+unsigned char can_broadcast = 0;
+unsigned char protect_status = 0;
 void int_init()
 {
 	EXTI_InitTypeDef   EXTI_InitStructure;
@@ -172,6 +175,8 @@ void EXTI15_10_IRQHandler(void)
 		/* S1 key*/
 		key |= KEY_S1;
 		EXTI_ClearITPendingBit(EXTI_Line12);
+		can_broadcast = 1;
+		protect_status = !protect_status;
 		//ctl_int(EXTI_Line12,0);
 	}
 
@@ -214,6 +219,63 @@ void RTCAlarm_IRQHandler(void)
   }
 }
 
+uint16_t get_addr_offs(uint32_t id)
+{
+	int i=3;
+	for (i=3;i<can_addr;i++)
+		if (id == addr_buf[i])
+			break;
+		
+	if (i==can_addr)
+	{
+		addr_buf[i] = id;
+		can_addr++;
+		return can_addr;
+	}
+
+	return i;
+}
+void CAN1_RX0_IRQHandler(void)
+{
+unsigned char resp[8] = {0};
+unsigned char cmd[8] = {0};
+unsigned short stdid;
+unsigned char len;
+uint16_t addr;
+uint32_t id;
+#ifdef MASTER
+  if ((stdid = can_read(resp, &len)) != 0) {
+				  id = resp[4];
+				  id = (id<<8) + resp[5];
+				  id = (id<<8) + resp[6];
+				  id = (id<<8) + resp[7];
+				  addr = get_addr_offs(id);
+				  if (resp[0] == 0x00 && resp[1] == 0x00)
+				  {   //assign can addr
+					  cmd[0] = 0x00;cmd[1]=0x01;
+					  cmd[2] = (addr >> 8) & 0xff;
+					  cmd[3] = addr&0xff;
+					  memcpy(cmd+4, resp+4, 4);
+					  can_send(2,cmd,8);
+				  } else if (resp[0] == 0x00 && resp[1] == 0x06) {
+					  //alarm
+					  cmd[0] = 0x00;cmd[1]=0x07;
+					  cmd[2] = resp[2];
+					  cmd[3] = protect_status;
+					  memcpy(cmd+4, resp+4, 4);
+					  can_send(addr,cmd,8);				  
+				  }
+				  led(1);
+				  delay_ms(1000);
+				  led(0); 
+			  } 	  
+
+#else
+handle_can_resp();
+
+#endif
+}
+
 /*
 	103c8t6 -> stm32
 	cmd_type 2 sub_cmd_type/device_mode 1 device_type 1 103c8t6_id 4
@@ -230,7 +292,7 @@ void handle_can_addr(uint8_t *id, uint8_t res)
 	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
-	can_send(cmd, ofs);
+	can_send(0x01, cmd, ofs);
 }
 void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd) 
 {	
@@ -254,7 +316,7 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 		last_sub_cmd |= 0x04;
 	}
 	
-	can_send(cmd, ofs);
+	can_send(0x01, cmd, ofs);
 }
 
 void switch_protect(unsigned char state)
@@ -309,20 +371,24 @@ void handle_can_resp()
 		
 	cmd_type = resp[15]<<8 | resp[16];
 	#endif
+	uint32_t id = resp[4];
+	id = (id << 8) + resp[5];
+	id = (id << 8) + resp[6];
+	id = (id << 8) + resp[7];
+	if (ID_CODE !=id)
+			return ;
+	cmd_type = resp[0]<<8 | resp[1];
 	switch (cmd_type) {
-		case CMD_REG_CODE_ACK:	
-			if (resp[len+2] != 0x00 && can_addr == 0) {/*if get vaild addr && curr addr ==0*/
-				memcpy(stm32_id, resp+5, STM32_CODE_LEN);
-				can_addr = resp[18];				
-				g_state = STATE_PROTECT_ON;
-			}
+		case CMD_REG_CODE_ACK:
+			set_id(resp[2]<<8 | resp[3]);		
+			g_state = STATE_PROTECT_ON;			
 			break;
 		
 		case CMD_ALARM_ACK:
-			if (b_protection_state != resp[len+2]) {
-				switch_protect(resp[len+2]);
+			if (b_protection_state != resp[3]) {
+				switch_protect(resp[3]);
 			}
-			switch (resp[len+1]) {
+			switch (resp[2]) {
 				case 0x01:
 					last_sub_cmd &= ~0x02;
 					break;
@@ -335,8 +401,8 @@ void handle_can_resp()
 			break;
 		case CMD_LOW_POWER_ACK:
 		case CMD_CUR_STATUS_ACK:
-			if (b_protection_state != resp[len+2]) {
-				switch_protect(resp[len+2]);
+			if (b_protection_state != resp[3]) {
+				switch_protect(resp[3]);
 			}
 			if (cmd_type == CMD_LOW_POWER_ACK)
 				last_sub_cmd &= ~0x04;
@@ -374,6 +440,8 @@ void handle_timer()
 		if (last_sub_cmd & 0x04)
 			handle_can_cmd(CMD_LOW_POWER,0x00);
 	}
+
+	if (last_sub_cmd !=0 || g_state != STATE_PROTECT_ON)
 	reconfig_rtc();
  
 	//unsigned short bat = read_adc();
@@ -390,16 +458,16 @@ void task()
 	delay_ms(1000);
 	led(0);
 	printf("begin to ask addr\r\n");
-	while(1) delay_ms(1000);
+	//while(1) delay_ms(1000);
 	handle_can_addr(NULL, 0);
 	reconfig_rtc();
 	while (1) {
 		led(0);
-		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-		SYSCLKConfig_STOP();
+		//PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+		//SYSCLKConfig_STOP();
 		__disable_irq();
 		led(1);
-		printf("wake from stop\r\n");
+		//printf("wake from stop\r\n");
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
 			printf("handle timer\r\n");
@@ -429,24 +497,74 @@ void task()
 			ctl_int(EXTI_Line10,1);
 		}
 		#endif
-		printf("goto stop\r\n");
-		//delay_ms(10);
+		//printf("goto stop\r\n");
 		__enable_irq();
+		delay_ms(1000);
 	}
 	return ;
 }
+/*
+  * slave -> master
+  * 00 00 02 d1 00 00 00 01 (stdid = 0x01 , req can addr)
+  * 00 01 xx xx 00 00 00 01 (stdid = 0x02 , ack can addr)
+  */
+void task_master()
+{
+	static unsigned short can_addr=0;
+	unsigned char resp[8] = {0};
+	unsigned char cmd[8] = {0};
+	unsigned char len = 32;
+	unsigned short stdid = 0;
 
+	while (1) {
+		memset(cmd,0,8);
+		if (can_rcv) {
+			can_rcv = 0;
+			if ((stdid = can_read(resp, &len)) != 0) {
+				if (resp[0] == 0x00 && resp[1] == 0x00)
+				{	//assign can addr
+					cmd[0] = 0x00;cmd[1]=0x01;
+					cmd[2] = (can_addr >> 8) & 0xff;
+					cmd[3] = can_addr&0xff;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(2,cmd,8);
+					delay_ms(2000);
+					can_send(can_addr,cmd,8);
+					can_addr++;
+				} else if (resp[0] == 0x00 && resp[1] == 0x06) {
+					//alarm
+					cmd[0] = 0x00;cmd[1]=0x07;
+					cmd[2] = resp[2];
+					cmd[3] = protect_status;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(stdid,cmd,8);					
+				}
+				led(1);
+				delay_ms(1000);
+				led(0);	
+			}			
+		}
+
+		if (can_broadcast) {
+			can_broadcast = 0;
+			cmd[0] = 0x00;cmd[1]=0x11;
+			cmd[2] = 0x00;
+			cmd[3] = protect_status;
+			can_send(2,cmd,8);					
+		}
+	}
+}
 int main(void)
 {	
 	led_init();
 	delay_init(72);
 	SWO_Enable();
 	Debug_uart_Init();
-//	delay_ms(10000);
-	printf("in int_init\r\n");
 	int_init();
-	printf("in can_init\r\n");
 	can_init();
-	printf("in task\r\n");
+	#ifdef MASTER
+	while(1) delay_ms(1000);
+	#else
 	task();
+	#endif
 }

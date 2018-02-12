@@ -25,23 +25,11 @@ CanTxMsg TxMessage;
 #define GPIO_Pin_CAN_RX 		   GPIO_Pin_CAN1_RX
 #define GPIO_Pin_CAN_TX 		   GPIO_Pin_CAN1_TX
 
-void CAN1_RX0_IRQHandler(void)
-{
-  CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
-  printf("DLC %x, ExtId %x, FMI %x, IDE %x, RTR %x, StdId %x\r\n",
-  	RxMessage.DLC,RxMessage.ExtId,RxMessage.FMI,RxMessage.IDE,RxMessage.RTR,RxMessage.StdId);
-  if ((RxMessage.StdId == 0x001)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 8))
-  {
-	//LED_Display(RxMessage.Data[0]);
-	//KeyNumber = RxMessage.Data[0];
-	printf("we got message %02x %02x %02x %02x %02x %02x %02x %02x\r\n", RxMessage.Data[0],RxMessage.Data[1],RxMessage.Data[2]
-	,RxMessage.Data[3],RxMessage.Data[4],RxMessage.Data[5],RxMessage.Data[6],RxMessage.Data[7]);
-  }
-}
-int can_send(unsigned char *payload, unsigned char payload_len)
+int can_send(unsigned short id, unsigned char *payload, unsigned char payload_len)
 {
 	int i;
 	uint8_t status;
+	TxMessage.StdId = id;
 	memcpy(TxMessage.Data, payload, 8);
 	printf("CAN send:\r\n");
 	for (i=0;i<payload_len;i++)
@@ -62,14 +50,30 @@ int can_read(unsigned char *buf, unsigned char *buf_len)
 	CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
 	printf("DLC %x, ExtId %x, FMI %x, IDE %x, RTR %x, StdId %x\r\n",
 	  RxMessage.DLC,RxMessage.ExtId,RxMessage.FMI,RxMessage.IDE,RxMessage.RTR,RxMessage.StdId);
-	if ((RxMessage.StdId == 0x001)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 8))
+	//if ((RxMessage.StdId == 0x002)&&(RxMessage.IDE == CAN_ID_STD) && (RxMessage.DLC == 8))
 	{
 	 	memcpy(buf, RxMessage.Data, 8);
 		*buf_len = 8;
 	  printf("we got message %02x %02x %02x %02x %02x %02x %02x %02x\r\n", RxMessage.Data[0],RxMessage.Data[1],RxMessage.Data[2]
 	  ,RxMessage.Data[3],RxMessage.Data[4],RxMessage.Data[5],RxMessage.Data[6],RxMessage.Data[7]);
+	  
+		return RxMessage.StdId;
 	}
-	return 1;
+	return 0;
+}
+void set_id(unsigned short id)
+{
+
+	CAN_FilterInitStructure.CAN_FilterNumber = 1;
+	CAN_FilterInitStructure.CAN_FilterMode = CAN_FilterMode_IdMask;
+	CAN_FilterInitStructure.CAN_FilterScale = CAN_FilterScale_32bit;
+	CAN_FilterInitStructure.CAN_FilterIdHigh = (id & 0x3ff) << 5;//0x0040;
+	CAN_FilterInitStructure.CAN_FilterIdLow = 0x0000;
+	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = 0xffff;
+	CAN_FilterInitStructure.CAN_FilterMaskIdLow = 0xffff;
+	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = 0;
+	CAN_FilterInitStructure.CAN_FilterActivation = ENABLE;
+	CAN_FilterInit(&CAN_FilterInitStructure);
 }
 void can_init()
 {
@@ -130,10 +134,14 @@ void can_init()
 	CAN_FilterInitStructure.CAN_FilterNumber = 0;
 	CAN_FilterInitStructure.CAN_FilterMode = CAN_FilterMode_IdMask;
 	CAN_FilterInitStructure.CAN_FilterScale = CAN_FilterScale_32bit;
-	CAN_FilterInitStructure.CAN_FilterIdHigh = 0x0000;
+	#ifdef MASTER
+	CAN_FilterInitStructure.CAN_FilterIdHigh = 0x0020;
+	#else
+	CAN_FilterInitStructure.CAN_FilterIdHigh = 0x0040;
+	#endif
 	CAN_FilterInitStructure.CAN_FilterIdLow = 0x0000;
-	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = 0x0000;
-	CAN_FilterInitStructure.CAN_FilterMaskIdLow = 0x0000;
+	CAN_FilterInitStructure.CAN_FilterMaskIdHigh = 0xffff;
+	CAN_FilterInitStructure.CAN_FilterMaskIdLow = 0xffff;
 	CAN_FilterInitStructure.CAN_FilterFIFOAssignment = 0;
 	CAN_FilterInitStructure.CAN_FilterActivation = ENABLE;
 	CAN_FilterInit(&CAN_FilterInitStructure);

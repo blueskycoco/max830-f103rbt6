@@ -70,6 +70,7 @@ ${COMPILER}/infrar.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/infrar.axf: infrar.ld
 SCATTERgcc_infrar=infrar.ld
 ENTRY_infrar=Reset_Handler
+#CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DMASTER
 CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD
 
 #
