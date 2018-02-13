@@ -72,7 +72,7 @@ SCATTERgcc_infrar=infrar.ld
 ENTRY_infrar=Reset_Handler
 #CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DMASTER
 CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD
-
+CFLAGSgcc+=-DDEBUG
 #
 # Include the automatically generated dependency files.
 #

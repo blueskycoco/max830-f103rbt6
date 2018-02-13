@@ -14,7 +14,7 @@ void delay_init(unsigned char SYSCLK)
 	fac_ms=(unsigned short)fac_us*1000;
 	SysTick->CTRL&=0XFFFFFFFE;
 	SysTick->VAL=0X00000000;
- 
+
 }            
 void delay_ms(unsigned short nms)
 {    
@@ -115,9 +115,9 @@ void ctl_int(int line, int flag)
 {
 	uint32_t tmp = 0;
 	tmp = (uint32_t)EXTI_BASE;
-    tmp += EXTI_Mode_Interrupt;
+	tmp += EXTI_Mode_Interrupt;
 	if (!flag)
-    	*(__IO uint32_t *) tmp &= ~line;
+		*(__IO uint32_t *) tmp &= ~line;
 	else
 		*(__IO uint32_t *) tmp |= line;
 }
