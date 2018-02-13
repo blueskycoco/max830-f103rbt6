@@ -60,18 +60,17 @@ ${COMPILER}:
 #
 # Rules for building the infrar example.
 #
-${COMPILER}/infrar.axf: ${COMPILER}/startup_${COMPILER}_103c8t6.o
-${COMPILER}/infrar.axf: ${COMPILER}/system_stm32f10x.o
+${COMPILER}/infrar.axf: ${COMPILER}/startup_${COMPILER}_030f4p6.o
+${COMPILER}/infrar.axf: ${COMPILER}/system_stm32f0xx.o
 ${COMPILER}/infrar.axf: ${COMPILER}/infrar.o
 ${COMPILER}/infrar.axf: ${COMPILER}/syscalls.o
 ${COMPILER}/infrar.axf: ${COMPILER}/mymisc.o
-${COMPILER}/infrar.axf: ${COMPILER}/can.o
 ${COMPILER}/infrar.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/infrar.axf: infrar.ld
 SCATTERgcc_infrar=infrar.ld
 ENTRY_infrar=Reset_Handler
 #CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DMASTER
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F030
 CFLAGSgcc+=-DDEBUG
 #
 # Include the automatically generated dependency files.

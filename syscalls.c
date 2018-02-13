@@ -1,7 +1,7 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <unistd.h>
-extern void DBG_PutChar(char ptr);
+#include "mymisc.h"
 #define ITM_ENA   (*(volatile unsigned int*)0xE0000E00) // ITM Enable
 #define ITM_TPR   (*(volatile unsigned int*)0xE0000E40) // Trace Privilege Register
 #define ITM_TCR   (*(volatile unsigned int*)0xE0000E80) // ITM Trace Control Reg.
@@ -115,8 +115,8 @@ caddr_t _sbrk(int incr) {
 int _write(int file, char *ptr, int len) {
 	int todo;
 	for (todo = 0; todo < len; todo++) {
-		//DBG_PutChar(*ptr++);
-		SWO_PrintChar(*ptr++);
+		DBG_PutChar(*ptr++);
+		//SWO_PrintChar(*ptr++);
 	}
 	return len;
 }

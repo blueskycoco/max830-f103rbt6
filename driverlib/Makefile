@@ -73,30 +73,30 @@ ${COMPILER}:
 #
 # Rules for building the driver library.
 #
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_gpio.o
-${COMPILER}/libdriver.a: ${COMPILER}/misc.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_adc.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_bkp.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_can.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_cec.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_crc.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_dac.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_dbgmcu.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_dma.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_exti.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_flash.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_fsmc.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_i2c.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_iwdg.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_pwr.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_rcc.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_rtc.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_sdio.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_spi.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_tim.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_usart.o
-${COMPILER}/libdriver.a: ${COMPILER}/stm32f10x_wwdg.o
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER  -DSTM32F10X_HD
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_gpio.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_misc.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_adc.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_comp.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_can.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_cec.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_crc.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_dac.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_dbgmcu.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_dma.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_exti.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_flash.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_crs.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_i2c.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_iwdg.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_pwr.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_rcc.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_rtc.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_syscfg.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_spi.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_tim.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_usart.o
+${COMPILER}/libdriver.a: ${COMPILER}/stm32f0xx_wwdg.o
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER  -DSTM32F030
 #
 # Include the automatically generated dependency files.
 #
