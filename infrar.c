@@ -31,23 +31,29 @@ static void SYSCLKConfig_STOP(void)
 }
 void EXTI0_1_IRQHandler(void)
 {
+	if(EXTI_GetITStatus(EXTI_Line0) != RESET)
+	{ 
+		/* Clear the TAMPER Button EXTI line pending bit */
+		EXTI_ClearITPendingBit(EXTI_Line0);
+		printf("user btn\r\n");
+	}
 	if(EXTI_GetITStatus(EXTI_Line1) != RESET)
 	{ 
 		/* Clear the TAMPER Button EXTI line pending bit */
 		EXTI_ClearITPendingBit(EXTI_Line1);
-		printf("user btn\r\n");
+		printf("serial int\r\n");
 	}
 }
 static void EXTI0_Config(void)
 {
-EXTI_InitTypeDef   EXTI_InitStructure;
-GPIO_InitTypeDef   GPIO_InitStructure;
-NVIC_InitTypeDef   NVIC_InitStructure;
+	EXTI_InitTypeDef   EXTI_InitStructure;
+	GPIO_InitTypeDef   GPIO_InitStructure;
+	NVIC_InitTypeDef   NVIC_InitStructure;
 	/* Enable GPIOA clock */
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 	/* Configure PA0 pin as input floating */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
@@ -55,10 +61,11 @@ RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 	/* Enable SYSCFG clock */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 	/* Connect EXTI0 Line to PA0 pin */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
 	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource1);
 
 	/* Configure EXTI0 line */
-	EXTI_InitStructure.EXTI_Line = EXTI_Line1;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line0|EXTI_Line1;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -79,7 +86,7 @@ int main(void)
 	while(1) {
 		//unsigned char *ptr = (unsigned char *)malloc(512);
 		//if (ptr == NULL)
-		if (GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_1) == RESET)
+		if (GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_0) == RESET)
 			printf("button is pressed\r\n");
 		else
 			printf("button is released\r\n");
@@ -88,12 +95,13 @@ int main(void)
 		//	printf("malloc 1024 ok\r\n");
 		//	free(ptr);
 		//}
-		delay_ms(500);
-		led(1);
-		delay_ms(500);
+	//	delay_ms(500);
 		led(0);
+	//	delay_ms(500);
+	//	led(0);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);		
 		SYSCLKConfig_STOP();
+		led(1);
 	}
 
 }
