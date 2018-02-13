@@ -29,20 +29,13 @@ static void SYSCLKConfig_STOP(void)
 	while (RCC_GetSYSCLKSource() != 0x08)
 	{}
 }
-void EXTI15_4_IRQHandler(void)
+void EXTI0_1_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(EXTI_Line1) != RESET)
 	{ 
 		/* Clear the TAMPER Button EXTI line pending bit */
 		EXTI_ClearITPendingBit(EXTI_Line1);
-	}
-}
-void EXTI2_3_IRQHandler(void)
-{
-	if(EXTI_GetITStatus(EXTI_Line3) != RESET)
-	{ 
-		/* Clear the TAMPER Button EXTI line pending bit */
-		EXTI_ClearITPendingBit(EXTI_Line3);
+		printf("user btn\r\n");
 	}
 }
 static void EXTI0_Config(void)
@@ -52,27 +45,27 @@ GPIO_InitTypeDef   GPIO_InitStructure;
 NVIC_InitTypeDef   NVIC_InitStructure;
 	/* Enable GPIOA clock */
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-
+RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 	/* Configure PA0 pin as input floating */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 
 	/* Enable SYSCFG clock */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 	/* Connect EXTI0 Line to PA0 pin */
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource3);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource1);
 
 	/* Configure EXTI0 line */
-	EXTI_InitStructure.EXTI_Line = EXTI_Line3;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line1;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
 	/* Enable and set EXTI0 Interrupt */
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI2_3_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI0_1_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPriority = 0x00;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
@@ -84,14 +77,17 @@ int main(void)
 	delay_init(48);
 	Debug_uart_Init();
 	while(1) {
-		unsigned char *ptr = (unsigned char *)malloc(1024);
-		if (ptr == NULL)
-			printf("malloc 1024 failed\r\n");
+		//unsigned char *ptr = (unsigned char *)malloc(512);
+		//if (ptr == NULL)
+		if (GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_1) == RESET)
+			printf("button is pressed\r\n");
 		else
-		{
-			printf("malloc 1024 ok\r\n");
-			free(ptr);
-		}
+			printf("button is released\r\n");
+		//else
+		//{
+		//	printf("malloc 1024 ok\r\n");
+		//	free(ptr);
+		//}
 		delay_ms(500);
 		led(1);
 		delay_ms(500);

@@ -36,7 +36,6 @@ static void FaultISR(void);
 static void IntDefaultHandler(void);
 static void SVC_Handler(void);
 extern void EXTI0_1_IRQHandler(void);
-extern void EXTI2_3_IRQHandler(void);
 //*****************************************************************************
 //
 // External declaration for the interrupt handler used by the application.
@@ -54,7 +53,7 @@ extern int main(void);
 // Reserve space for the system stack.
 //
 //*****************************************************************************
-static uint32_t pui32Stack[64];
+static uint32_t pui32Stack[128];
 #define BootRAM ((void *)(0xF108F85F))
 //*****************************************************************************
 //
@@ -88,7 +87,7 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	FLASH_IRQHandler
 	IntDefaultHandler,    //	RCC_IRQHandler
 	EXTI0_1_IRQHandler,    //	EXTI0_1_IRQHandler
-	EXTI2_3_IRQHandler,    //	EXTI2_3_IRQHandler
+	IntDefaultHandler,    //	EXTI2_3_IRQHandler
 	IntDefaultHandler,    //	EXTI4_15_IRQHandler
 	0,    
 	IntDefaultHandler,    //	DMA1_Channel1_IRQHandler
