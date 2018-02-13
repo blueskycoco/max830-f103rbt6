@@ -174,7 +174,7 @@ void EXTI9_5_IRQHandler(void)
 	{
 		/* S1 key*/
 		key |= KEY_CAN;
-		can_rcv = 1;
+		//can_rcv = 1;
 		//ctl_int(EXTI_Line7,0);
 		printf("exti 7\r\n");
 		#ifndef MASTER
@@ -198,6 +198,8 @@ void EXTI15_10_IRQHandler(void)
 	#ifndef MASTER
 		/* infrar */
 		key |= KEY_INFRAR;
+	
+	can_rcv =0;
 		printf("infrar int\r\n");
 		if (b_protection_state)
 			handle_can_cmd(CMD_ALARM, 0x01);
@@ -213,6 +215,8 @@ void EXTI15_10_IRQHandler(void)
 		protect_status = !protect_status;		
 		#ifndef MASTER
 		printf("s1 int\r\n");
+		
+		can_rcv =0;
 		handle_can_cmd(CMD_ALARM, 0x02);
 		#else
 		cmd[0] = 0x00;cmd[1]=0x11;
@@ -274,13 +278,13 @@ uint16_t get_addr_offs(uint32_t id)
 void CAN1_RX0_IRQHandler(void)
 {
 key |= KEY_CAN;
-can_rcv = 1;
 printf("CAN1_RX0_IRQHandler\r\n");
 #ifndef MASTER
 handle_can_resp();
 #else
 task_master();
 #endif
+can_rcv = 1;
 
 }
 
@@ -334,7 +338,7 @@ void switch_protect(unsigned char state)
 		/*switch to protect on*/
 		//timer off
 		//infrar int on
-		ctl_int(EXTI_Line13, 1);
+		//ctl_int(EXTI_Line13, 1);
 		GPIO_SetBits(GPIOA,GPIO_Pin_2);
 		led(1);
 	} else {
@@ -342,7 +346,7 @@ void switch_protect(unsigned char state)
 		//timer on
 		//infrar int off
 		//TACTL = TASSEL_1 + MC_2 + TAIE + ID0;
-		ctl_int(EXTI_Line13,0);
+		//ctl_int(EXTI_Line13,0);
 		GPIO_ResetBits(GPIOA,GPIO_Pin_2);
 		led(0);
 	}				
@@ -470,12 +474,15 @@ void task()
 	printf("begin to ask addr\r\n");
 	//while(1) delay_ms(1000);
 	reconfig_rtc();
+	can_rcv =0;
 	handle_can_addr(NULL, 0);
 	while (1) {
 		//led(0);
 		//printf("goto stop\r\n");
-		//PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-		//SYSCLKConfig_STOP();
+		if (can_rcv) {
+			PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+			SYSCLKConfig_STOP();
+		}
 		//printf("wakeup\r\n");
 		#if 0
 		__disable_irq();

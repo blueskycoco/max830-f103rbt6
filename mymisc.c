@@ -80,12 +80,12 @@ void led(int on)
 	if (on)
 	{
 		GPIO_ResetBits(GPIOB,GPIO_Pin_14);		
-		GPIO_SetBits(GPIOB,GPIO_Pin_15);
+		GPIO_ResetBits(GPIOB,GPIO_Pin_15);
 	}
 	else
 	{
 		GPIO_SetBits(GPIOB,GPIO_Pin_14);
-		GPIO_ResetBits(GPIOB,GPIO_Pin_15);
+		GPIO_SetBits(GPIOB,GPIO_Pin_15);
 	}
 }
 
