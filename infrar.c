@@ -5,9 +5,81 @@
 #include <string.h>
 #include <stdlib.h>
 #include "mymisc.h"
+static void SYSCLKConfig_STOP(void)
+{  
+	/* After wake-up from STOP reconfigure the system clock */
+	/* Enable HSE */
+	RCC_HSEConfig(RCC_HSE_ON);
 
+	/* Wait till HSE is ready */
+	while (RCC_GetFlagStatus(RCC_FLAG_HSERDY) == RESET)
+	{}
+
+	/* Enable PLL */
+	RCC_PLLCmd(ENABLE);
+
+	/* Wait till PLL is ready */
+	while (RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET)
+	{}
+
+	/* Select PLL as system clock source */
+	RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+
+	/* Wait till PLL is used as system clock source */
+	while (RCC_GetSYSCLKSource() != 0x08)
+	{}
+}
+void EXTI15_4_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line1) != RESET)
+	{ 
+		/* Clear the TAMPER Button EXTI line pending bit */
+		EXTI_ClearITPendingBit(EXTI_Line1);
+	}
+}
+void EXTI2_3_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line3) != RESET)
+	{ 
+		/* Clear the TAMPER Button EXTI line pending bit */
+		EXTI_ClearITPendingBit(EXTI_Line3);
+	}
+}
+static void EXTI0_Config(void)
+{
+EXTI_InitTypeDef   EXTI_InitStructure;
+GPIO_InitTypeDef   GPIO_InitStructure;
+NVIC_InitTypeDef   NVIC_InitStructure;
+	/* Enable GPIOA clock */
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+
+	/* Configure PA0 pin as input floating */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+	/* Enable SYSCFG clock */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	/* Connect EXTI0 Line to PA0 pin */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource3);
+
+	/* Configure EXTI0 line */
+	EXTI_InitStructure.EXTI_Line = EXTI_Line3;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+
+	/* Enable and set EXTI0 Interrupt */
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI2_3_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPriority = 0x00;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+}
 int main(void)
 {	
+	EXTI0_Config();
 	led_init();
 	delay_init(48);
 	Debug_uart_Init();
@@ -24,7 +96,8 @@ int main(void)
 		led(1);
 		delay_ms(500);
 		led(0);
-		
+		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);		
+		SYSCLKConfig_STOP();
 	}
 
 }
