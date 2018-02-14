@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "mymisc.h"
+uint8_t flag = 0;
 static void SYSCLKConfig_STOP(void)
 {  
 	/* After wake-up from STOP reconfigure the system clock */
@@ -33,15 +34,13 @@ void EXTI0_1_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(EXTI_Line0) != RESET)
 	{ 
-		/* Clear the TAMPER Button EXTI line pending bit */
+		flag = 0;
 		EXTI_ClearITPendingBit(EXTI_Line0);
-		printf("user btn\r\n");
 	}
 	if(EXTI_GetITStatus(EXTI_Line1) != RESET)
 	{ 
-		/* Clear the TAMPER Button EXTI line pending bit */
+		flag = 1;
 		EXTI_ClearITPendingBit(EXTI_Line1);
-		printf("serial int\r\n");
 	}
 }
 static void EXTI0_Config(void)
@@ -84,24 +83,18 @@ int main(void)
 	delay_init(48);
 	Debug_uart_Init();
 	while(1) {
-		//unsigned char *ptr = (unsigned char *)malloc(512);
-		//if (ptr == NULL)
 		if (GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_0) == RESET)
 			printf("button is pressed\r\n");
 		else
 			printf("button is released\r\n");
-		//else
-		//{
-		//	printf("malloc 1024 ok\r\n");
-		//	free(ptr);
-		//}
-	//	delay_ms(500);
+		if (flag)
+			printf("serial wake up\r\n");
+		else
+			printf("user btn wake up\r\n");
 		led(0);
-	//	delay_ms(500);
-	//	led(0);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);		
 		SYSCLKConfig_STOP();
 		led(1);
+		delay_ms(10);
 	}
-
 }
