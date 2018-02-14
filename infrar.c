@@ -70,6 +70,7 @@ void int_init()
 
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
 	NVIC_Init(&NVIC_InitStructure);
+
 	EXTI_ClearITPendingBit(EXTI_Line17);
 	EXTI_InitStructure.EXTI_Line = EXTI_Line17;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
@@ -152,56 +153,21 @@ void EXTI9_5_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(EXTI_Line7) != RESET)
 	{
-		/* S1 key*/
 		key |= KEY_CAN;
-		//can_rcv = 1;
-		//ctl_int(EXTI_Line7,0);
-		printf("exti 7\r\n");
-#ifndef MASTER
-		//handle_can_resp();
-#endif
 		EXTI_ClearITPendingBit(EXTI_Line7);
 	}
 }
 void EXTI15_10_IRQHandler(void)
 {
-	int i;
-	unsigned char cmd[8] = {0};
 	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
 	{
-#ifndef MASTER
-		/* infrar */
 		key |= KEY_INFRAR;
-
-		can_rcv =0;
-		printf("infrar int\r\n");
-		if (b_protection_state)
-			handle_can_cmd(CMD_ALARM, 0x01);
-#endif
 		EXTI_ClearITPendingBit(EXTI_Line13);
 	}
 
 	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
 	{
-		/* S1 key*/
 		key |= KEY_S1;
-#ifndef MASTER
-		printf("s1 int\r\n");
-
-		can_rcv =0;
-		handle_can_cmd(CMD_ALARM, 0x02);
-#else
-		can_broadcast = 1;
-		protect_status = !protect_status;		
-		cmd[0] = 0x00;cmd[1]=0x11;
-		cmd[2] = 0x00;
-		cmd[3] = protect_status;
-		for (i=3;i<can_addr;i++)
-		{
-			memcpy(cmd+4, addr_buf+i,4);
-			can_send(i,cmd,8);			
-		}
-#endif
 		EXTI_ClearITPendingBit(EXTI_Line12);
 	}
 
@@ -210,7 +176,6 @@ void RTCAlarm_IRQHandler(void)
 {
 	if(RTC_GetITStatus(RTC_IT_ALR) != RESET)
 	{
-
 		/* Clear EXTI line17 pending bit */
 		EXTI_ClearITPendingBit(EXTI_Line17);
 
@@ -229,7 +194,6 @@ void RTCAlarm_IRQHandler(void)
 		/* Wait until last write operation on RTC registers has finished */
 		RTC_WaitForLastTask();
 		key |= KEY_TIMER;
-		handle_timer();
 	}
 }
 #ifdef MASTER
@@ -250,18 +214,6 @@ uint16_t get_addr_offs(uint32_t id)
 	return i;
 }
 #endif
-void CAN1_RX0_IRQHandler(void)
-{
-	key |= KEY_CAN;
-	printf("CAN1_RX0_IRQHandler\r\n");
-#ifndef MASTER
-	handle_can_resp();
-#else
-	task_master();
-#endif
-	can_rcv = 1;
-
-}
 
 /*
    103c8t6 -> stm32
@@ -308,18 +260,9 @@ void switch_protect(unsigned char state)
 {
 	b_protection_state = state;
 	if (b_protection_state) {
-		/*switch to protect on*/
-		//timer off
-		//infrar int on
-		//ctl_int(EXTI_Line13, 1);
 		GPIO_SetBits(GPIOA,GPIO_Pin_2);
 		led(1);
 	} else {
-		/*switch to protect off*/
-		//timer on
-		//infrar int off
-		//TACTL = TASSEL_1 + MC_2 + TAIE + ID0;
-		//ctl_int(EXTI_Line13,0);
 		GPIO_ResetBits(GPIOA,GPIO_Pin_2);
 		led(0);
 	}				
@@ -378,11 +321,11 @@ void handle_can_resp()
 	}
 }
 
-void reconfig_rtc()
+void reconfig_rtc(int sec)
 {
 	RTC_ClearFlag(RTC_FLAG_SEC);
 	while(RTC_GetFlagStatus(RTC_FLAG_SEC) == RESET);
-	RTC_SetAlarm(RTC_GetCounter()+ 5);
+	RTC_SetAlarm(RTC_GetCounter()+ sec);
 	RTC_WaitForLastTask();
 }
 void handle_timer()
@@ -401,9 +344,6 @@ void handle_timer()
 		}
 
 	}
-
-	if (last_sub_cmd !=0 || g_state != STATE_PROTECT_ON)
-		reconfig_rtc();
 }
 void task()
 {		
@@ -415,57 +355,41 @@ void task()
 	delay_ms(1000);
 	led(0);
 	printf("begin to ask addr\r\n");
-	//while(1) delay_ms(1000);
-	reconfig_rtc();
-	can_rcv =0;
-	handle_can_addr(NULL, 0);
+	reconfig_rtc(1);
 	while (1) {
-		//led(0);
-		//printf("goto stop\r\n");
-		if (can_rcv) {
-			PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-			SYSCLKConfig_STOP();
-		}
-		//printf("wakeup\r\n");
-#if 0
-		__disable_irq();
-		led(1);
-		//printf("wake from stop\r\n");
+		printf("enter stop\r\n");
+		delay_ms(10);
+		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+		SYSCLKConfig_STOP();		
+		delay_ms(10);
+		printf("leave stop\r\n");
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
 			printf("handle timer\r\n");
 			handle_timer();
 		}
-#if 1
 		if (key & KEY_S1) {
 			key &= ~KEY_S1;
-			/*send s1 alarm to stm32*/
+			printf("S1 pressed\r\n");
 			handle_can_cmd(CMD_ALARM, 0x02);
-			//ctl_int(EXTI_Line12,1);
 		}
 
 		if (key & KEY_INFRAR) {
 			key &= ~KEY_INFRAR;
-			/*send infrar alarm to stm32*/
-			//add int count then make decision
+			printf("infrar pressed\r\n");
 			if (b_protection_state)
 				handle_can_cmd(CMD_ALARM, 0x01);
-			//ctl_int(EXTI_Line13,1);
 		}
-
+		
 		if (key & KEY_CAN) {
 			key &= ~KEY_CAN;
-			/*new data come from stm32*/
+			printf("can data in\r\n");
 			handle_can_resp();
-			//ctl_int(EXTI_Line10,1);
 		}
-#endif
-		printf("goto stop\r\n");
-		ctl_int(EXTI_Line7,1);
-		__enable_irq();
-		//delay_ms(1000);
-#endif
-	}
+
+		if (last_sub_cmd !=0 || g_state != STATE_PROTECT_ON)
+			reconfig_rtc(5);
+		}
 	return ;
 }
 /*

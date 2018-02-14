@@ -43,7 +43,6 @@ static void DebugMon_Handler(void);
 //*****************************************************************************
 extern void EXTI15_10_IRQHandler(void);
 extern void RTCAlarm_IRQHandler(void);
-extern void CAN1_RX0_IRQHandler(void);
 extern void EXTI9_5_IRQHandler(void);
 //*****************************************************************************
 //
@@ -105,7 +104,7 @@ void (* const g_pfnVectors[])(void) =
 	 IntDefaultHandler,    //	DMA1_Channel7_IRQHandler
 	 IntDefaultHandler,    //	ADC1_2_IRQHandler
 	 IntDefaultHandler,    //	USB_HP_CAN1_TX_IRQHandler
-	 CAN1_RX0_IRQHandler,    //	USB_LP_CAN1_RX0_IRQHandler
+	 IntDefaultHandler,    //	USB_LP_CAN1_RX0_IRQHandler
 	 IntDefaultHandler,    //	CAN1_RX1_IRQHandler
 	 IntDefaultHandler,    //	CAN1_SCE_IRQHandler
 	 EXTI9_5_IRQHandler,    //	EXTI9_5_IRQHandler

@@ -6,7 +6,7 @@
 CanRxMsg 							RxMessage;
 CAN_FilterInitTypeDef  				CAN_FilterInitStructure;
 CanTxMsg 							TxMessage;
-uint16_t 							local_addr;
+uint16_t 							local_addr = 0x02;
 #define RCC_APB2Periph_GPIO_CAN1   	RCC_APB2Periph_GPIOB
 #define CANx			   			CAN1
 #define GPIO_CAN		   			GPIOB
@@ -37,6 +37,7 @@ int can_send(unsigned short id, unsigned char *payload,
 	{
 		i++;
 	}
+	printf("i is %x\r\n", i);
 	if (i == 0xFFFF)
 		return 0;
 	
@@ -85,7 +86,7 @@ void can_init()
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
+//	NVIC_Init(&NVIC_InitStructure);
 
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
@@ -152,6 +153,10 @@ void can_init()
 	{
 		RxMessage.Data[i] = 0x00;
 	}
-
-	CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
+	uint8_t num = CAN_MessagePending(CANx,CAN_FIFO0); 
+	if (num > 0)
+	while (num--) {
+		CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
+	}
+//	CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 }
