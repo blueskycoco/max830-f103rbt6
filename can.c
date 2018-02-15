@@ -6,7 +6,11 @@
 CanRxMsg 							RxMessage;
 CAN_FilterInitTypeDef  				CAN_FilterInitStructure;
 CanTxMsg 							TxMessage;
+#ifdef MASTER
+uint16_t 							local_addr = 0x01;
+#else
 uint16_t 							local_addr = 0x02;
+#endif
 #define RCC_APB2Periph_GPIO_CAN1   	RCC_APB2Periph_GPIOB
 #define CANx			   			CAN1
 #define GPIO_CAN		   			GPIOB
@@ -22,14 +26,16 @@ int can_send(unsigned short id, unsigned char *payload,
 	TxMessage.StdId = id;
 	memcpy(TxMessage.Data, payload, 8);
 #ifdef DEBUG
-	printf("CAN send:\r\n");
+	printf("CAN send ID %d:\r\n", id);
 	for (i=0;i<payload_len;i++)
 		printf("%02x ", payload[i]);
 	printf("\r\n");
 #endif
 	TransmitMailbox = CAN_Transmit(CANx, &TxMessage);
-	if (TransmitMailbox == CAN_TxStatus_NoMailBox)
+	printf("can send error %x\r\n",CAN_GetLastErrorCode(CANx));
+	if (TransmitMailbox == CAN_TxStatus_NoMailBox) {
 		return 0;
+	}
 
 	i = 0;
 	while(((status = CAN_TransmitStatus(CANx, TransmitMailbox)) != CANTXOK) 
@@ -46,8 +52,12 @@ int can_send(unsigned short id, unsigned char *payload,
 int can_read(unsigned char *buf, unsigned char *buf_len)
 {
 	*buf_len = 0;
+	//uint8_t num = CAN_MessagePending(CAN1, CAN_FIFO0);
+	//if (num == 0)
+	//	return 0;
 	CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
 #ifdef DEBUG
+	//printf("pending message %d\r\n", num);
 	printf("DLC %x, ExtId %x, FMI %x, IDE %x, RTR %x, StdId %x\r\n",
 			RxMessage.DLC,(unsigned int)RxMessage.ExtId,RxMessage.FMI,
 			RxMessage.IDE,RxMessage.RTR,(unsigned int)RxMessage.StdId);
@@ -76,9 +86,10 @@ void set_id(unsigned short id)
 void can_init()
 {
 	uint8_t i = 0;
-	NVIC_InitTypeDef  	NVIC_InitStructure;
 	GPIO_InitTypeDef	GPIO_InitStructure;
 	CAN_InitTypeDef		CAN_InitStructure;
+/*
+	NVIC_InitTypeDef  	NVIC_InitStructure;
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
 	NVIC_InitStructure.NVIC_IRQChannel = USB_LP_CAN1_RX0_IRQn;
@@ -86,9 +97,8 @@ void can_init()
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-//	NVIC_Init(&NVIC_InitStructure);
-
-
+	NVIC_Init(&NVIC_InitStructure);
+*/
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIO_CAN1, ENABLE);
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_CAN_RX;

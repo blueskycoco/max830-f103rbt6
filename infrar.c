@@ -29,13 +29,6 @@ unsigned char b_protection_state 	= 0;	/*protection state*/
 /*0x01 s1_alarm, 0x02 infrar_alarm, 0x04 low_power_alarm, 0x08 cur_status*/
 unsigned char last_sub_cmd 			= 0x00; 
 volatile unsigned char key 			= 0x0;
-unsigned char can_rcv 				= 0;
-#ifdef MASTER
-unsigned short can_addr				= 3;
-uint32_t addr_buf[1024] 			= {0};
-unsigned char can_broadcast 		= 0;
-unsigned char protect_status 		= 0;
-#endif
 void int_init()
 {
 	EXTI_InitTypeDef   EXTI_InitStructure;
@@ -44,7 +37,6 @@ void int_init()
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_7;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -54,7 +46,6 @@ void int_init()
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource7);
-
 	EXTI_InitStructure.EXTI_Line = EXTI_Line12|EXTI_Line13|EXTI_Line7;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
@@ -67,10 +58,8 @@ void int_init()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&NVIC_InitStructure);
-
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
 	NVIC_Init(&NVIC_InitStructure);
-
 	EXTI_ClearITPendingBit(EXTI_Line17);
 	EXTI_InitStructure.EXTI_Line = EXTI_Line17;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
@@ -196,24 +185,6 @@ void RTCAlarm_IRQHandler(void)
 		key |= KEY_TIMER;
 	}
 }
-#ifdef MASTER
-uint16_t get_addr_offs(uint32_t id)
-{
-	int i=3;
-	for (i=3;i<can_addr;i++)
-		if (id == addr_buf[i])
-			break;
-
-	if (i==can_addr)
-	{
-		addr_buf[i] = id;
-		can_addr++;
-		return can_addr;
-	}
-
-	return i;
-}
-#endif
 
 /*
    103c8t6 -> stm32
@@ -345,8 +316,106 @@ void handle_timer()
 
 	}
 }
+/*void CAN1_RX0_IRQHandler(void)
+{
+	if (CAN_GetFlagStatus(CAN1,CAN_IT_FMP0)) { 
+		key |= KEY_CAN;
+		CAN_ClearFlag(CAN1, CAN_IT_FMP0);
+	}
+}*/
+/*
+ * slave -> master
+ * 00 00 02 d1 00 00 00 01 (stdid = 0x01 , req can addr)
+ * 00 01 xx xx 00 00 00 01 (stdid = 0x02 , ack can addr)
+ */
+#ifdef MASTER
+unsigned short can_addr				= 3;
+uint32_t addr_buf[1024] 			= {0};
+unsigned char protect_status 		= 0;
+uint16_t get_addr_offs(uint32_t id)
+{
+	int i=3;
+	for (i=3;i<can_addr;i++)
+		if (id == addr_buf[i])
+			break;
+
+	if (i==can_addr)
+	{
+		addr_buf[i] = id;
+		can_addr++;
+		return can_addr;
+	}
+
+	return i;
+}
 void task()
 {		
+	unsigned char resp[8] = {0};
+	unsigned char cmd[8] = {0};
+	unsigned char len = 32;
+	unsigned short stdid = 0;
+	uint16_t addr;
+	uint32_t id;
+	led(1);
+	delay_ms(1000);
+	led(0);	
+	delay_ms(1000);
+	led(1);
+	delay_ms(1000);
+	led(0);
+	printf("begin recv slave req\r\n");
+	while (1) {
+		if (key & KEY_S1) {
+			key &= ~KEY_S1;
+			printf("protection on\r\n");
+			cmd[0] = 0x00;cmd[1]=0x11;
+			cmd[2] = 0x00;
+			cmd[3] = 0x01;
+			can_send(2,cmd,8);					
+		}
+
+		if (key & KEY_INFRAR) {
+			key &= ~KEY_INFRAR;
+			printf("protection off\r\n");
+			cmd[0] = 0x00;cmd[1]=0x11;
+			cmd[2] = 0x00;
+			cmd[3] = 0x00;
+			can_send(2,cmd,8);					
+		}
+
+		if (key & KEY_CAN) {
+			key &= ~KEY_CAN;
+			printf("can data in\r\n");
+			if ((stdid = can_read(resp, &len)) != 0) {
+				id = resp[4];
+				id = (id<<8) + resp[5];
+				id = (id<<8) + resp[6];
+				id = (id<<8) + resp[7];
+				addr = get_addr_offs(id);
+				printf("addr %d, id %08x \r\n",addr,id);
+				if (resp[0] == 0x00 && resp[1] == 0x00)
+				{   //assign can addr
+					cmd[0] = 0x00;cmd[1]=0x01;
+					cmd[2] = (addr >> 8) & 0xff;
+					cmd[3] = addr&0xff;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(2,cmd,8);
+				} else if (resp[0] == 0x00 && resp[1] == 0x06) {
+					//alarm
+					cmd[0] = 0x00;cmd[1]=0x07;
+					cmd[2] = resp[2];
+					cmd[3] = protect_status;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(addr,cmd,8);				  
+				}
+			}			
+		}
+	}
+	return ;
+}
+#else
+void task()
+{
 	led(1);
 	delay_ms(1000);
 	led(0);	
@@ -359,7 +428,9 @@ void task()
 	while (1) {
 		printf("enter stop\r\n");
 		delay_ms(10);
+		led(0);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+		led(1);
 		SYSCLKConfig_STOP();		
 		delay_ms(10);
 		printf("leave stop\r\n");
@@ -380,73 +451,17 @@ void task()
 			if (b_protection_state)
 				handle_can_cmd(CMD_ALARM, 0x01);
 		}
-		
+
 		if (key & KEY_CAN) {
 			key &= ~KEY_CAN;
 			printf("can data in\r\n");
 			handle_can_resp();
 		}
 
-		if (last_sub_cmd !=0 || g_state != STATE_PROTECT_ON)
+		if ((last_sub_cmd !=0 || g_state != STATE_PROTECT_ON))
 			reconfig_rtc(5);
-		}
-	return ;
-}
-/*
- * slave -> master
- * 00 00 02 d1 00 00 00 01 (stdid = 0x01 , req can addr)
- * 00 01 xx xx 00 00 00 01 (stdid = 0x02 , ack can addr)
- */
-#ifdef MASTER
-void task_master()
-{
-	unsigned char resp[8] = {0};
-	unsigned char cmd[8] = {0};
-	unsigned char len = 32;
-	unsigned short stdid = 0;
-	uint16_t addr;
-	uint32_t id;
-
-	//while (1) {
-	memset(cmd,0,8);
-	//if (can_rcv) {
-	can_rcv = 0;
-	if ((stdid = can_read(resp, &len)) != 0) {
-		id = resp[4];
-		id = (id<<8) + resp[5];
-		id = (id<<8) + resp[6];
-		id = (id<<8) + resp[7];
-		addr = get_addr_offs(id);
-		printf("addr %d, id %08x \r\n",addr,id);
-		if (resp[0] == 0x00 && resp[1] == 0x00)
-		{   //assign can addr
-			cmd[0] = 0x00;cmd[1]=0x01;
-			cmd[2] = (addr >> 8) & 0xff;
-			cmd[3] = addr&0xff;
-			memcpy(cmd+4, resp+4, 4);
-			can_send(2,cmd,8);
-		} else if (resp[0] == 0x00 && resp[1] == 0x06) {
-			//alarm
-			cmd[0] = 0x00;cmd[1]=0x07;
-			cmd[2] = resp[2];
-			cmd[3] = protect_status;
-			memcpy(cmd+4, resp+4, 4);
-			can_send(addr,cmd,8);				  
-		}
-		led(1);
-		delay_ms(1000);
-		led(0);	
-	}			
-	//}
-
-	if (can_broadcast) {
-		can_broadcast = 0;
-		cmd[0] = 0x00;cmd[1]=0x11;
-		cmd[2] = 0x00;
-		cmd[3] = protect_status;
-		can_send(2,cmd,8);					
 	}
-	//}
+	return ;
 }
 #endif
 
@@ -458,9 +473,6 @@ int main(void)
 	Debug_uart_Init();
 	int_init();
 	can_init();
-#ifdef MASTER
-	while(1);//task_master();
-#else
 	task();
-#endif
 }
+
