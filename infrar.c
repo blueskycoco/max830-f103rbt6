@@ -24,6 +24,12 @@ extern void SWO_Enable(void);
 #define STATE_ASK_CC1101_ADDR		0
 #define STATE_PROTECT_ON			2
 
+#ifdef MASTER
+unsigned short can_addr				= 3;
+uint32_t addr_buf[1024] 			= {0};
+unsigned char protect_status 		= 0;
+uint16_t get_addr_offs(uint32_t id);
+#endif
 unsigned char g_state 				= STATE_ASK_CC1101_ADDR;
 unsigned char b_protection_state 	= 0;	/*protection state*/
 /*0x01 s1_alarm, 0x02 infrar_alarm, 0x04 low_power_alarm, 0x08 cur_status*/
@@ -58,8 +64,10 @@ void int_init()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&NVIC_InitStructure);
+#ifndef MASTER
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
 	NVIC_Init(&NVIC_InitStructure);
+#endif
 	EXTI_ClearITPendingBit(EXTI_Line17);
 	EXTI_InitStructure.EXTI_Line = EXTI_Line17;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
@@ -151,12 +159,26 @@ void EXTI15_10_IRQHandler(void)
 	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
 	{
 		key |= KEY_INFRAR;
+#ifdef MASTER
+	unsigned char cmd[8] = {0};
+			cmd[0] = 0x00;cmd[1]=0x11;
+			cmd[2] = 0x00;
+			cmd[3] = 0x00;
+			can_send(2,cmd,8);					
+#endif
 		EXTI_ClearITPendingBit(EXTI_Line13);
 	}
 
 	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
 	{
 		key |= KEY_S1;
+#ifdef MASTER
+	unsigned char cmd[8] = {0};
+			cmd[0] = 0x00;cmd[1]=0x11;
+			cmd[2] = 0x00;
+			cmd[3] = 0x01;
+			can_send(2,cmd,8);					
+#endif
 		EXTI_ClearITPendingBit(EXTI_Line12);
 	}
 
@@ -316,22 +338,53 @@ void handle_timer()
 
 	}
 }
-/*void CAN1_RX0_IRQHandler(void)
+void CAN1_RX0_IRQHandler(void)
 {
-	if (CAN_GetFlagStatus(CAN1,CAN_IT_FMP0)) { 
+	printf("can1 rx0 %d\r\n", CAN_GetITStatus(CAN1,CAN_IT_FMP0));
+	if (CAN_GetITStatus(CAN1,CAN_IT_FMP0) != RESET) { 
 		key |= KEY_CAN;
-		CAN_ClearFlag(CAN1, CAN_IT_FMP0);
+#ifdef MASTER
+	unsigned char resp[8] = {0};
+	unsigned char cmd[8] = {0};
+	unsigned char len = 32;
+	unsigned short stdid = 0;
+	uint16_t addr;
+	uint32_t id;
+			if ((stdid = can_read(resp, &len)) != 0) {
+				id = resp[4];
+				id = (id<<8) + resp[5];
+				id = (id<<8) + resp[6];
+				id = (id<<8) + resp[7];
+				addr = get_addr_offs(id);
+				printf("addr %d, id %08x \r\n",addr,id);
+				if (resp[0] == 0x00 && resp[1] == 0x00)
+				{   //assign can addr
+					cmd[0] = 0x00;cmd[1]=0x01;
+					cmd[2] = (addr >> 8) & 0xff;
+					cmd[3] = addr&0xff;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(2,cmd,8);
+				} else if (resp[0] == 0x00 && resp[1] == 0x06) {
+					//alarm
+					cmd[0] = 0x00;cmd[1]=0x07;
+					cmd[2] = resp[2];
+					cmd[3] = protect_status;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(addr,cmd,8);				  
+				}
+			}			
+#else
+			handle_can_resp();
+#endif
+		CAN_ClearITPendingBit(CAN1, CAN_IT_FMP0);
 	}
-}*/
+}
 /*
  * slave -> master
  * 00 00 02 d1 00 00 00 01 (stdid = 0x01 , req can addr)
  * 00 01 xx xx 00 00 00 01 (stdid = 0x02 , ack can addr)
  */
 #ifdef MASTER
-unsigned short can_addr				= 3;
-uint32_t addr_buf[1024] 			= {0};
-unsigned char protect_status 		= 0;
 uint16_t get_addr_offs(uint32_t id)
 {
 	int i=3;
@@ -364,6 +417,7 @@ void task()
 	delay_ms(1000);
 	led(0);
 	printf("begin recv slave req\r\n");
+	while(1);
 	while (1) {
 		if (key & KEY_S1) {
 			key &= ~KEY_S1;
@@ -429,7 +483,9 @@ void task()
 		printf("enter stop\r\n");
 		delay_ms(10);
 		led(0);
+		ctl_int(EXTI_Line7,1);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+		ctl_int(EXTI_Line7,0);
 		led(1);
 		SYSCLKConfig_STOP();		
 		delay_ms(10);

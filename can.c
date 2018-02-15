@@ -88,7 +88,7 @@ void can_init()
 	uint8_t i = 0;
 	GPIO_InitTypeDef	GPIO_InitStructure;
 	CAN_InitTypeDef		CAN_InitStructure;
-/*
+
 	NVIC_InitTypeDef  	NVIC_InitStructure;
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
@@ -98,7 +98,7 @@ void can_init()
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
-*/
+
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIO_CAN1, ENABLE);
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_CAN_RX;
@@ -168,5 +168,5 @@ void can_init()
 	while (num--) {
 		CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
 	}
-//	CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
+	CAN_ITConfig(CANx, CAN_IT_FMP0, ENABLE);
 }
