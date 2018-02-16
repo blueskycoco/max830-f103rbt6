@@ -6,7 +6,7 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ID_CODE						0x00000001
+#define ID_CODE						0x00000002
 
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
@@ -64,7 +64,7 @@ void int_init()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&NVIC_InitStructure);
-#ifndef MASTER
+#if 0//ndef MASTER
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
 	NVIC_Init(&NVIC_InitStructure);
 #endif
@@ -151,6 +151,7 @@ void EXTI9_5_IRQHandler(void)
 	if(EXTI_GetITStatus(EXTI_Line7) != RESET)
 	{
 		key |= KEY_CAN;
+		printf("int7\r\n");
 		EXTI_ClearITPendingBit(EXTI_Line7);
 	}
 }
@@ -160,11 +161,23 @@ void EXTI15_10_IRQHandler(void)
 	{
 		key |= KEY_INFRAR;
 #ifdef MASTER
-	unsigned char cmd[8] = {0};
+/*	unsigned char cmd[8] = {0};
 			cmd[0] = 0x00;cmd[1]=0x11;
 			cmd[2] = 0x00;
 			cmd[3] = 0x00;
-			can_send(2,cmd,8);					
+			for (int i=3; i<can_addr; i++) {
+				cmd[4]= (addr_buf[i] >> 24) & 0xff;
+				cmd[5]= (addr_buf[i] >> 16) & 0xff;
+				cmd[6]= (addr_buf[i] >> 8) & 0xff;
+				cmd[7]= (addr_buf[i] >> 0) & 0xff;
+				if (0 == can_send(i,cmd,8))
+				{
+					delay_ms(20);
+					can_send(i,cmd,8);
+				}				
+			}
+*/
+		protect_status = 0;
 #endif
 		EXTI_ClearITPendingBit(EXTI_Line13);
 	}
@@ -173,11 +186,23 @@ void EXTI15_10_IRQHandler(void)
 	{
 		key |= KEY_S1;
 #ifdef MASTER
-	unsigned char cmd[8] = {0};
+	/*unsigned char cmd[8] = {0};
 			cmd[0] = 0x00;cmd[1]=0x11;
 			cmd[2] = 0x00;
 			cmd[3] = 0x01;
-			can_send(2,cmd,8);					
+			for (int i=3; i<can_addr; i++) {
+				cmd[4]= (addr_buf[i] >> 24) & 0xff;
+				cmd[5]= (addr_buf[i] >> 16) & 0xff;
+				cmd[6]= (addr_buf[i] >> 8) & 0xff;
+				cmd[7]= (addr_buf[i] >> 0) & 0xff;
+				if (0 == can_send(i,cmd,8))
+				{
+					delay_ms(20);
+					can_send(i,cmd,8);
+				}				
+			}
+			*/
+		protect_status = 1;
 #endif
 		EXTI_ClearITPendingBit(EXTI_Line12);
 	}
@@ -225,6 +250,9 @@ void handle_can_addr(uint8_t *id, uint8_t res)
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
 	can_send(0x01, cmd, ofs);
+	//if (poll_can())
+	//		handle_can_resp();
+
 }
 void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd) 
 {	
@@ -244,9 +272,13 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 			last_sub_cmd |= 0x02;
 		else if(sub_cmd == 0x02)
 			last_sub_cmd |= 0x01;
+	} else if (main_cmd == CMD_CUR_STATUS) {
+		last_sub_cmd |= 0x08;
 	}
 
 	can_send(0x01, cmd, ofs);
+	//if (poll_can())
+	//		handle_can_resp();
 }
 
 void switch_protect(unsigned char state)
@@ -334,6 +366,7 @@ void handle_timer()
 				handle_can_cmd(CMD_ALARM,0x01);
 		} else {
 			last_sub_cmd &= ~0x02;
+			handle_can_cmd(CMD_CUR_STATUS,0x01);
 		}
 
 	}
@@ -342,8 +375,8 @@ void CAN1_RX0_IRQHandler(void)
 {
 	printf("can1 rx0 %d\r\n", CAN_GetITStatus(CAN1,CAN_IT_FMP0));
 	if (CAN_GetITStatus(CAN1,CAN_IT_FMP0) != RESET) { 
-		key |= KEY_CAN;
 #ifdef MASTER
+		key |= KEY_CAN;
 	unsigned char resp[8] = {0};
 	unsigned char cmd[8] = {0};
 	unsigned char len = 32;
@@ -371,6 +404,13 @@ void CAN1_RX0_IRQHandler(void)
 					cmd[3] = protect_status;
 					memcpy(cmd+4, resp+4, 4);
 					can_send(addr,cmd,8);				  
+				} else if (resp[0] == 0x00 && resp[1] == 0x10) {
+					//curr status
+					cmd[0] = 0x00;cmd[1]=0x11;
+					cmd[2] = resp[2];
+					cmd[3] = protect_status;
+					memcpy(cmd+4, resp+4, 4);
+					can_send(addr,cmd,8);				  
 				}
 			}			
 #else
@@ -389,14 +429,17 @@ uint16_t get_addr_offs(uint32_t id)
 {
 	int i=3;
 	for (i=3;i<can_addr;i++)
+	{
+		printf("i %d, can_addr %d, id %x , addr_buf %x\r\n",
+				i,can_addr,id,addr_buf[i]);
 		if (id == addr_buf[i])
 			break;
-
+	}
 	if (i==can_addr)
 	{
 		addr_buf[i] = id;
 		can_addr++;
-		return can_addr;
+		return can_addr-1;
 	}
 
 	return i;
@@ -480,12 +523,7 @@ void task()
 	printf("begin to ask addr\r\n");
 	reconfig_rtc(1);
 	while (1) {
-		printf("enter stop\r\n");
-		delay_ms(10);
-		led(0);
-		ctl_int(EXTI_Line7,1);
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-		ctl_int(EXTI_Line7,0);
 		led(1);
 		SYSCLKConfig_STOP();		
 		delay_ms(10);
@@ -513,9 +551,15 @@ void task()
 			printf("can data in\r\n");
 			handle_can_resp();
 		}
+		printf("enter stop\r\n");
+		delay_ms(30);
+		led(0);
 
-		if ((last_sub_cmd !=0 || g_state != STATE_PROTECT_ON))
+		if (!b_protection_state || last_sub_cmd !=0 || g_state != STATE_PROTECT_ON)
+		{
+			printf("%d %d %d\r\n",b_protection_state,last_sub_cmd,g_state);
 			reconfig_rtc(5);
+		}
 	}
 	return ;
 }

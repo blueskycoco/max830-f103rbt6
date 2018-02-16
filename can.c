@@ -17,7 +17,21 @@ uint16_t 							local_addr = 0x02;
 #define GPIO_Remapping_CAN	   		GPIO_Remap1_CAN1
 #define GPIO_Pin_CAN_RX 	   		GPIO_Pin_8
 #define GPIO_Pin_CAN_TX 	   		GPIO_Pin_9
-
+int poll_can()
+{
+	int i=0;
+	while(CAN_MessagePending(CANx, CAN_FIFO0) == 0) {
+		i++;
+		delay_ms(1);
+		if (i==1000)
+			break;
+	}
+	if (i==1000)
+		printf("no can data\r\n");
+	else
+		printf("have can data %d\r\n", i);
+	return (i==1000) ? 0:1;
+}
 int can_send(unsigned short id, unsigned char *payload, 
 		unsigned char payload_len)
 {
@@ -25,6 +39,7 @@ int can_send(unsigned short id, unsigned char *payload,
 	uint8_t status,TransmitMailbox;
 	TxMessage.StdId = id;
 	memcpy(TxMessage.Data, payload, 8);
+	//CAN_ClearFlag(CAN1,0xffffffff);
 #ifdef DEBUG
 	printf("CAN send ID %d:\r\n", id);
 	for (i=0;i<payload_len;i++)
