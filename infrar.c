@@ -6,7 +6,7 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ID_CODE						0x00000002
+#define ID_CODE						0x00000001
 
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
@@ -30,6 +30,7 @@ uint32_t addr_buf[1024] 			= {0};
 unsigned char protect_status 		= 0;
 uint16_t get_addr_offs(uint32_t id);
 #endif
+unsigned char g_cnt 				= 0;
 unsigned char g_state 				= STATE_ASK_CC1101_ADDR;
 unsigned char b_protection_state 	= 0;	/*protection state*/
 /*0x01 s1_alarm, 0x02 infrar_alarm, 0x04 low_power_alarm, 0x08 cur_status*/
@@ -82,7 +83,7 @@ void int_init()
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&NVIC_InitStructure);
-	/* RTC clock source configuration ------------------------------------------*/
+	/* RTC clock source configuration ---------------------------------------*/
 	/* Allow access to BKP Domain */
 	PWR_BackupAccessCmd(ENABLE);
 
@@ -102,7 +103,7 @@ void int_init()
 	/* Enable the RTC Clock */
 	RCC_RTCCLKCmd(ENABLE);
 
-	/* RTC configuration -------------------------------------------------------*/
+	/* RTC configuration ----------------------------------------------------*/
 	/* Wait for RTC APB registers synchronisation */
 	RTC_WaitForSynchro();
 
@@ -275,7 +276,7 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 	} else if (main_cmd == CMD_CUR_STATUS) {
 		last_sub_cmd |= 0x08;
 	}
-
+	g_cnt++;
 	can_send(0x01, cmd, ofs);
 	//if (poll_can())
 	//		handle_can_resp();
@@ -314,10 +315,12 @@ void handle_can_resp()
 			case CMD_REG_CODE_ACK:
 				set_id(resp[2]<<8 | resp[3]);	
 				printf("set new id %d\r\n",resp[2]<<8|resp[3]);
-				g_state = STATE_PROTECT_ON;			
+				g_state = STATE_PROTECT_ON;		
+				g_cnt = 0;
 				break;
 
 			case CMD_ALARM_ACK:
+				g_cnt = 0;
 				if (b_protection_state != resp[3]) {
 					switch_protect(resp[3]);
 				}
@@ -333,6 +336,7 @@ void handle_can_resp()
 				}
 				break;
 			case CMD_CUR_STATUS_ACK:
+				g_cnt = 0;
 				if (b_protection_state != resp[3]) {
 					switch_protect(resp[3]);
 				}
@@ -355,7 +359,14 @@ void reconfig_rtc(int sec)
 }
 void handle_timer()
 {
-	printf("handle timer in\r\n");
+	printf("handle timer in %d\r\n",g_cnt);
+	if (g_cnt > 3) {
+		g_state	= STATE_ASK_CC1101_ADDR;
+		last_sub_cmd = 0;	
+		b_protection_state = 0;
+		switch_protect(0);
+		set_id(0x02);	
+	}
 	if (g_state == STATE_ASK_CC1101_ADDR)
 		handle_can_addr(NULL, 0);
 	else {
@@ -555,7 +566,8 @@ void task()
 		delay_ms(30);
 		led(0);
 
-		if (!b_protection_state || last_sub_cmd !=0 || g_state != STATE_PROTECT_ON)
+		if (!b_protection_state || last_sub_cmd !=0 || 
+				g_state != STATE_PROTECT_ON)
 		{
 			printf("%d %d %d\r\n",b_protection_state,last_sub_cmd,g_state);
 			reconfig_rtc(5);
