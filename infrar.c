@@ -534,7 +534,7 @@ void task()
 	led(0);
 	printf("begin to ask addr\r\n");
 	reconfig_rtc(1);
-	GPIO_SetBits(GPIOA,GPIO_Pin_2);
+	GPIO_ResetBits(GPIOA,GPIO_Pin_2);
 	while (1) {
 		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 		SYSCLKConfig_STOP();		
