@@ -72,52 +72,18 @@ void led_init()
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_15|GPIO_Pin_14;
+	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_0;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
 }
 void led(int on)
 {
 	if (on)
 	{
-		GPIO_ResetBits(GPIOB,GPIO_Pin_14);		
-		GPIO_ResetBits(GPIOB,GPIO_Pin_15);
+		GPIO_ResetBits(GPIOB,GPIO_Pin_0);		
 	}
 	else
 	{
-		GPIO_SetBits(GPIOB,GPIO_Pin_14);
-		GPIO_SetBits(GPIOB,GPIO_Pin_15);
+		GPIO_SetBits(GPIOB,GPIO_Pin_0);
 	}
 }
 
-unsigned short Packet_CRC(unsigned char *Data,unsigned char Data_length)
-{
-	unsigned int mid=0;
-	unsigned char times=0,Data_index=0;
-	unsigned short CRC_data=0xFFFF;
-	while(Data_length)
-	{
-		CRC_data=Data[Data_index]^CRC_data;
-		for(times=0;times<8;times++)
-		{
-			mid=CRC_data;
-			CRC_data=CRC_data>>1;
-			if(mid & 0x0001)
-			{
-				CRC_data=CRC_data^0xA001;
-			}
-		}
-		Data_index++;
-		Data_length--;
-	}
-	return CRC_data;
-}
-void ctl_int(int line, int flag)
-{
-	uint32_t tmp = 0;
-	tmp = (uint32_t)EXTI_BASE;
-	tmp += EXTI_Mode_Interrupt;
-	if (!flag)
-		*(__IO uint32_t *) tmp &= ~line;
-	else
-		*(__IO uint32_t *) tmp |= line;
-}

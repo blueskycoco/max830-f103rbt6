@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-# Makefile - Rules for building the infrar example.
+# Makefile - Rules for building the gd103 example.
 #
 # Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 # Software License Agreement
@@ -36,12 +36,13 @@ include ${ROOT}/makedefs
 # Where to find header files that do not live in the source directory.
 #
 IPATH=./inc
-
+IPATH+=./usb/inc
+VPATH=./usb/src
 #
-# The default rule, which causes the infrar example to be built.
+# The default rule, which causes the gd103 example to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/infrar.axf
+all: ${COMPILER}/gd103.axf
 
 #
 # The rule to clean out all the build products.
@@ -58,20 +59,29 @@ ${COMPILER}:
 	@mkdir -p ${COMPILER}
 
 #
-# Rules for building the infrar example.
+# Rules for building the gd103 example.
 #
-${COMPILER}/infrar.axf: ${COMPILER}/startup_${COMPILER}_103c8t6.o
-${COMPILER}/infrar.axf: ${COMPILER}/system_stm32f10x.o
-${COMPILER}/infrar.axf: ${COMPILER}/infrar.o
-${COMPILER}/infrar.axf: ${COMPILER}/syscalls.o
-${COMPILER}/infrar.axf: ${COMPILER}/mymisc.o
-${COMPILER}/infrar.axf: ${COMPILER}/can.o
-${COMPILER}/infrar.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
-${COMPILER}/infrar.axf: infrar.ld
-SCATTERgcc_infrar=infrar.ld
-ENTRY_infrar=Reset_Handler
+${COMPILER}/gd103.axf: ${COMPILER}/startup_${COMPILER}_103c8t6.o
+${COMPILER}/gd103.axf: ${COMPILER}/system_stm32f10x.o
+${COMPILER}/gd103.axf: ${COMPILER}/gd103.o
+${COMPILER}/gd103.axf: ${COMPILER}/syscalls.o
+${COMPILER}/gd103.axf: ${COMPILER}/mymisc.o
+${COMPILER}/gd103.axf: ${COMPILER}/stm32f1xx_hal_pcd.o
+${COMPILER}/gd103.axf: ${COMPILER}/stm32f1xx_hal_pcd_ex.o
+${COMPILER}/gd103.axf: ${COMPILER}/usb.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_cdc.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_cdc_interface.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_conf.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_core.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_ctlreq.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_desc.o
+${COMPILER}/gd103.axf: ${COMPILER}/usbd_ioreq.o
+${COMPILER}/gd103.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
+${COMPILER}/gd103.axf: gd103.ld
+SCATTERgcc_gd103=gd103.ld
+ENTRY_gd103=Reset_Handler
 #CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD -DMASTER
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD -DSTM32F103x6
 CFLAGSgcc+=-DDEBUG
 #
 # Include the automatically generated dependency files.

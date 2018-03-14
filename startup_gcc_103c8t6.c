@@ -41,10 +41,6 @@ static void DebugMon_Handler(void);
 // External declaration for the interrupt handler used by the application.
 //
 //*****************************************************************************
-extern void EXTI15_10_IRQHandler(void);
-extern void RTCAlarm_IRQHandler(void);
-extern void EXTI9_5_IRQHandler(void);
-extern void CAN1_RX0_IRQHandler(void);
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -105,10 +101,10 @@ void (* const g_pfnVectors[])(void) =
 	 IntDefaultHandler,    //	DMA1_Channel7_IRQHandler
 	 IntDefaultHandler,    //	ADC1_2_IRQHandler
 	 IntDefaultHandler,    //	USB_HP_CAN1_TX_IRQHandler
-	 CAN1_RX0_IRQHandler,    //	USB_LP_CAN1_RX0_IRQHandler
+	 IntDefaultHandler,    //	USB_LP_CAN1_RX0_IRQHandler
 	 IntDefaultHandler,    //	CAN1_RX1_IRQHandler
 	 IntDefaultHandler,    //	CAN1_SCE_IRQHandler
-	 EXTI9_5_IRQHandler,    //	EXTI9_5_IRQHandler
+	 IntDefaultHandler,    //	EXTI9_5_IRQHandler
 	 IntDefaultHandler,    //	TIM1_BRK_IRQHandler
 	 IntDefaultHandler,    //	TIM1_UP_IRQHandler
 	 IntDefaultHandler,    //	TIM1_TRG_COM_IRQHandler
@@ -125,8 +121,8 @@ void (* const g_pfnVectors[])(void) =
 	 IntDefaultHandler,    //	USART1_IRQHandler
 	 IntDefaultHandler,    //	USART2_IRQHandler
 	 IntDefaultHandler,    //	USART3_IRQHandler
-	 EXTI15_10_IRQHandler,    //	EXTI15_10_IRQHandler
-	 RTCAlarm_IRQHandler,    //	RTCAlarm_IRQHandler
+	 IntDefaultHandler,    //	EXTI15_10_IRQHandler
+	 IntDefaultHandler,    //	RTCAlarm_IRQHandler
 	 IntDefaultHandler,    //	USBWakeUp_IRQHandler	
 	0,
 	0,
