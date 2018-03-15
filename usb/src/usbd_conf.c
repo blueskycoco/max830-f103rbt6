@@ -47,7 +47,6 @@
 
 /* Includes ------------------------------------------------------------------ */
 #include "main.h"
-
 /* Private typedef ----------------------------------------------------------- */
 /* Private define ------------------------------------------------------------ */
 #define USB_DISCONNECT_PORT                 GPIOB
@@ -74,31 +73,48 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef * hpcd)
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* Enable the GPIOA clock */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
+  //__HAL_RCC_GPIOA_CLK_ENABLE();
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
+  GPIO_InitStruct.GPIO_Pin = (GPIO_Pin_11);
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
+ // GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+ // GPIO_InitStruct.GPIO_OType= GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(GPIOA , &GPIO_InitStruct);
+  GPIO_InitStruct.GPIO_Pin = (GPIO_Pin_12);
+  //GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+  GPIO_Init(GPIOA , &GPIO_InitStruct);
+  //GPIO_PinAFConfig(GPIOA,GPIO_PinSource11, GPIO_AF_2);
+  //GPIO_PinAFConfig(GPIOA,GPIO_PinSource12, GPIO_AF_2);
   /* Configure USB DM/DP pins */
-  GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  //GPIO_InitStruct.Pin = (GPIO_PIN_11 | GPIO_PIN_12);
+  //GPIO_InitStruct.Mode = GPIO_MODE_AF_INPUT;
+  //GPIO_InitStruct.Pull = GPIO_PULLUP;
+  //GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  //HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  //RCC_USBCLKConfig(RCC_USBCLK_PLLCLK);
+  RCC_USBCLKConfig(RCC_USBCLKSource_PLLCLK_1Div5);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USB, ENABLE);
+  NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 3);
+  NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
 
   /* Enable the USB disconnect GPIO clock */
-  __HAL_RCC_GPIOB_CLK_ENABLE();
+  //__HAL_RCC_GPIOB_CLK_ENABLE();
 
   /* USB_DISCONNECT used as USB pull-up */
-  GPIO_InitStruct.Pin = USB_DISCONNECT_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  HAL_GPIO_Init(USB_DISCONNECT_PORT, &GPIO_InitStruct);
+  //GPIO_InitStruct.Pin = USB_DISCONNECT_PIN;
+  //GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  //HAL_GPIO_Init(USB_DISCONNECT_PORT, &GPIO_InitStruct);
 
   /* Enable USB Clock */
-  __HAL_RCC_USB_CLK_ENABLE();
+  //__HAL_RCC_USB_CLK_ENABLE();
 
   /* Set USB Interrupt priority */
-  HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 7, 0);
+  //HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 7, 0);
 
   /* Enable USB Interrupt */
-  HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
+  //HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
 }
 
 /**
@@ -109,7 +125,8 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef * hpcd)
 void HAL_PCD_MspDeInit(PCD_HandleTypeDef * hpcd)
 {
   /* Disable USB FS Clock */
-  __HAL_RCC_USB_CLK_DISABLE();
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USB, DISABLE);
+//  __HAL_RCC_USB_CLK_DISABLE();
 }
 
 /*******************************************************************************
@@ -453,7 +470,7 @@ uint32_t USBD_LL_GetRxDataSize(USBD_HandleTypeDef * pdev, uint8_t ep_addr)
   */
 void USBD_LL_Delay(uint32_t Delay)
 {
-  HAL_Delay(Delay);
+  //HAL_Delay(Delay);
 }
 
 /**
@@ -488,12 +505,12 @@ void HAL_PCDEx_SetConnectionState(PCD_HandleTypeDef * hpcd, uint8_t state)
   if (state != 0)
   {
     /* Enabling DP Pull-Down bit to Connect internal pull-up on USB DP line */
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+    //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
   }
   else
   {
     /* Disable DP Pull-Down bit */
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+    //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
   }
 }
 

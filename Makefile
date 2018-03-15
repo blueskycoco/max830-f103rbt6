@@ -76,6 +76,7 @@ ${COMPILER}/gd103.axf: ${COMPILER}/usbd_core.o
 ${COMPILER}/gd103.axf: ${COMPILER}/usbd_ctlreq.o
 ${COMPILER}/gd103.axf: ${COMPILER}/usbd_desc.o
 ${COMPILER}/gd103.axf: ${COMPILER}/usbd_ioreq.o
+${COMPILER}/gd103.axf: ${COMPILER}/stm32f1xx_ll_usb.o
 ${COMPILER}/gd103.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/gd103.axf: gd103.ld
 SCATTERgcc_gd103=gd103.ld

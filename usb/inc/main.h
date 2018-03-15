@@ -51,6 +51,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
+#include "stm32f10x_conf.h"
 //#include "stm3210e_eval.h"
 #include "usbd_core.h"
 #include "stm32f1xx_hal_pcd.h"
