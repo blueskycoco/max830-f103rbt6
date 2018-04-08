@@ -30,7 +30,7 @@ uint32_t addr_buf[1024] 			= {0};
 unsigned char protect_status 		= 0;
 uint16_t get_addr_offs(uint32_t id);
 #endif
-unsigned char open_led = 1;
+unsigned int open_led = 0;//1;
 unsigned char g_cnt 				= 0;
 unsigned char g_state 				= STATE_ASK_CC1101_ADDR;
 unsigned char b_protection_state 	= 0;	/*protection state*/
@@ -533,35 +533,44 @@ void task()
 	delay_ms(1000);
 	led(0);
 	printf("begin to ask addr\r\n");
-	reconfig_rtc(1);
+	//reconfig_rtc(1);
 	GPIO_ResetBits(GPIOA,GPIO_Pin_2);
 	while (1) {
-		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-		SYSCLKConfig_STOP();		
-		delay_ms(10);
-		printf("leave stop\r\n");
-		if (key & KEY_TIMER) {
+	//	PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+	//	SYSCLKConfig_STOP();		
+	//	delay_ms(10);
+	//	printf("leave stop\r\n");
+/*		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
-			open_led = 1;
+			//open_led = 1;
+			led(1);
+			delay_ms(1000);
+			led(0);
 			printf("handle timer\r\n");
 		}
-
+*/
 		if (key & KEY_INFRAR) {
 			key &= ~KEY_INFRAR;
-			if (open_led) {
+			if (open_led >= 5) {
 			led(1);
 			delay_ms(1000);
 			led(0);
 			open_led = 0;
-			}
 			printf("infrar pressed\r\n");
+			}
+		} else {
+			delay_ms(1000);
+			if (open_led < 65535)
+				open_led++;
+			else
+				open_led = 0;
 		}
 
-		printf("enter stop\r\n");
-		delay_ms(30);
+	//	printf("enter stop\r\n");
+	//	delay_ms(30);
 
-			printf("%d %d %d\r\n",b_protection_state,last_sub_cmd,g_state);
-			reconfig_rtc(5);
+	//		printf("%d %d %d\r\n",b_protection_state,last_sub_cmd,g_state);
+	//		reconfig_rtc(5);
 	}
 	return ;
 }
