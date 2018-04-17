@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-# Makefile - Rules for building the infrar example.
+# Makefile - Rules for building the float example.
 #
 # Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 # Software License Agreement
@@ -38,10 +38,10 @@ include ${ROOT}/makedefs
 IPATH=./inc
 
 #
-# The default rule, which causes the infrar example to be built.
+# The default rule, which causes the float example to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/infrar.axf
+all: ${COMPILER}/float.axf
 
 #
 # The rule to clean out all the build products.
@@ -58,17 +58,17 @@ ${COMPILER}:
 	@mkdir -p ${COMPILER}
 
 #
-# Rules for building the infrar example.
+# Rules for building the float example.
 #
-${COMPILER}/infrar.axf: ${COMPILER}/startup_${COMPILER}_030f4p6.o
-${COMPILER}/infrar.axf: ${COMPILER}/system_stm32f0xx.o
-${COMPILER}/infrar.axf: ${COMPILER}/infrar.o
-${COMPILER}/infrar.axf: ${COMPILER}/syscalls.o
-${COMPILER}/infrar.axf: ${COMPILER}/mymisc.o
-${COMPILER}/infrar.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
-${COMPILER}/infrar.axf: infrar.ld
-SCATTERgcc_infrar=infrar.ld
-ENTRY_infrar=Reset_Handler
+${COMPILER}/float.axf: ${COMPILER}/startup_${COMPILER}_030f4p6.o
+${COMPILER}/float.axf: ${COMPILER}/system_stm32f0xx.o
+${COMPILER}/float.axf: ${COMPILER}/float.o
+${COMPILER}/float.axf: ${COMPILER}/syscalls.o
+${COMPILER}/float.axf: ${COMPILER}/mymisc.o
+${COMPILER}/float.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
+${COMPILER}/float.axf: float.ld
+SCATTERgcc_float=float.ld
+ENTRY_float=Reset_Handler
 #CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DMASTER
 CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F030
 CFLAGSgcc+=-DDEBUG

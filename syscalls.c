@@ -115,7 +115,7 @@ caddr_t _sbrk(int incr) {
 int _write(int file, char *ptr, int len) {
 	int todo;
 	for (todo = 0; todo < len; todo++) {
-		DBG_PutChar(*ptr++);
+		PutChar(*ptr++);
 		//SWO_PrintChar(*ptr++);
 	}
 	return len;

@@ -36,6 +36,7 @@ static void FaultISR(void);
 static void IntDefaultHandler(void);
 static void SVC_Handler(void);
 extern void EXTI0_1_IRQHandler(void);
+extern void USART1_IRQHandler(void);
 //*****************************************************************************
 //
 // External declaration for the interrupt handler used by the application.
@@ -108,7 +109,7 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	I2C2_IRQHandler
 	IntDefaultHandler,    //	SPI1_IRQHandler
 	IntDefaultHandler,    //	SPI2_IRQHandler
-	IntDefaultHandler,    //	USART1_IRQHandler
+	USART1_IRQHandler,    //	USART1_IRQHandler
 	IntDefaultHandler,    //	USART2_IRQHandler
 	0,
 	0,
