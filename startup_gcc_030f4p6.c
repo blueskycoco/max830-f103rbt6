@@ -35,7 +35,7 @@ static void NmiSR(void);
 static void FaultISR(void);
 static void IntDefaultHandler(void);
 static void SVC_Handler(void);
-extern void EXTI0_1_IRQHandler(void);
+extern void EXTI4_15_IRQHandler(void);
 extern void USART1_IRQHandler(void);
 //*****************************************************************************
 //
@@ -87,9 +87,9 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	RTC_IRQHandler
 	IntDefaultHandler,    //	FLASH_IRQHandler
 	IntDefaultHandler,    //	RCC_IRQHandler
-	EXTI0_1_IRQHandler,    //	EXTI0_1_IRQHandler
+	IntDefaultHandler,    //	EXTI0_1_IRQHandler
 	IntDefaultHandler,    //	EXTI2_3_IRQHandler
-	IntDefaultHandler,    //	EXTI4_15_IRQHandler
+	EXTI4_15_IRQHandler,    //	EXTI4_15_IRQHandler
 	0,    
 	IntDefaultHandler,    //	DMA1_Channel1_IRQHandler
 	IntDefaultHandler,    //	DMA1_Channel2_3_IRQHandler

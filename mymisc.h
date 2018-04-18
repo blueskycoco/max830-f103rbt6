@@ -7,6 +7,7 @@ void led_init();
 void led(int on);
 void Uart_Init();
 void PutChar(char ptr);
-void EXTI1_Config(void);
+void EXTI6_Config(void);
 int8_t GetChar(void);
+void Init_MAX7219();
 #endif
