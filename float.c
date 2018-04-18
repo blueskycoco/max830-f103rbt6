@@ -10,16 +10,20 @@ uint32_t cnt=0;
 uint8_t rx_buf[64] = {0};
 void USART1_IRQHandler(void)
 {
-	int8_t ch;
+	//int8_t ch;
 	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
 	{
 		if(USART_GetFlagStatus(USART1, USART_FLAG_PE) == RESET)
 		{
-			while((ch = GetChar()) != -1)
-				rx_buf[cnt++] = ch;
-			uart_rx_ind = 1;
+			//while((ch = GetChar()) != -1)
+			rx_buf[cnt++] = GetChar();
 		}
 		USART_ClearITPendingBit(USART1, USART_IT_RXNE);
+	}
+	if(USART_GetITStatus(USART1, USART_IT_RTO) != RESET)
+	{
+		uart_rx_ind = 1;
+		USART_ClearITPendingBit(USART1, USART_IT_RTO);
 	}
 }
 int main(void)
@@ -32,9 +36,9 @@ int main(void)
 	printf("float system on\r\n");
 	led(0);
 	while(1) {
-		//printf("uart rx ind %d\r\n", uart_rx_ind);
+		__WFI();
+		printf("stm32 wakeup\r\n");
 		if (uart_rx_ind) {
-			printf("have data in\r\n");
 			printf("got cmd[%d]: ",cnt);
 			for (i=0; i<cnt; i++)
 				printf("%02x ", rx_buf[i]);
@@ -42,10 +46,5 @@ int main(void)
 			uart_rx_ind = 0;			
 			cnt=0;
 		}
-	//	delay_ms(1000);
-	//	if (uart_rx_ind)
-	//		led(1);
-	//	else
-	//		led(0);
 	}
 }

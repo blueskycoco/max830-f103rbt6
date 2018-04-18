@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include "mymisc.h"
 #define ITM_ENA   (*(volatile unsigned int*)0xE0000E00) // ITM Enable
