@@ -214,6 +214,48 @@ uint8_t spi_send(uint8_t *data,int len)
 	GPIO_SetBits(GPIOA,GPIO_Pin_4);
 	return result;
 }
+uint8_t cur[4][8] = {0};
+/* x from 0 - 15
+ * y from 0 - 15
+ * on 0/1
+ * map 1 2
+ *     3 4
+ */
+void set7219(uint8_t x, uint8_t y, uint8_t on)
+{
+	uint8_t i,j,index=0;
+	uint8_t cmd[8] = {0};
+	uint8_t tmp_x = x%8;
+	uint8_t tmp_y = y%8;
+
+	/* get segment for data
+	 * get line for address
+	 */
+	if (x < 8 && x >= 0 && y < 16 && y >= 8)
+		index = 0;
+	else if(x < 16 && x >= 8 && y < 16 && y >= 8)
+		index = 1;
+	else if(x < 8 && x >= 0 && y < 8 && y >= 0)
+		index = 2;
+	else if(x < 16 && x >= 8 && y < 8 && y >= 0)
+		index = 3;
+	if (on) {
+		cur[index][tmp_x] |= (1<<tmp_y);
+	} else {
+		cur[index][tmp_x] &= ~(1<<tmp_y);
+	}
+	cmd[0] = cmd[2] = cmd[4] = cmd[6] = tmp_x+1;
+	for (i=1; i<8; i=i+2)
+		cmd[i] = cur[(i-1)/2][tmp_x];
+	printf("cmd %02x %02x %02x %02x %02x %02x %02x %02x\r\ncur:\r\n",
+			cmd[0],cmd[1],cmd[2],cmd[3],cmd[4],cmd[5],cmd[6],cmd[7]);
+	for (i=0; i<4; i++) {
+		for (j=0; j<8; j++)
+			printf("%02x ", cur[i][j]);
+		printf("\r\n");
+	}
+	spi_send(cmd,8);
+}
 void Init_MAX7219()
 {
 	uint8_t cmd0[] = {0x09,0x00,0x09,0x00,0x09,0x00,0x09,0x00};
@@ -228,3 +270,28 @@ void Init_MAX7219()
 	spi_send(cmd3,8);
 	spi_send(cmd4,8);
 }
+
+unsigned int CRC_check(unsigned char *Data,unsigned short Data_length)
+{
+	unsigned int mid=0;
+	unsigned char times=0;
+	unsigned short Data_index=0;
+	unsigned int CRC1=0xFFFF;
+	while(Data_length)
+	{
+		CRC1=Data[Data_index]^CRC1;
+		for(times=0;times<8;times++)
+		{
+			mid=CRC1;
+			CRC1=CRC1>>1;
+			if(mid & 0x0001)
+			{
+				CRC1=CRC1^0xA001;
+			}
+		}
+		Data_index++;
+		Data_length--;
+	}
+	return CRC1;
+}
+

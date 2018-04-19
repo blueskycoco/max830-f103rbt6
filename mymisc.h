@@ -10,4 +10,6 @@ void PutChar(char ptr);
 void EXTI6_Config(void);
 int8_t GetChar(void);
 void Init_MAX7219();
+void set7219(uint8_t x, uint8_t y, uint8_t on);
+unsigned int CRC_check(unsigned char *Data,unsigned short Data_length);
 #endif

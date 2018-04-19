@@ -24,6 +24,9 @@ void USART1_IRQHandler(void)
 		USART_ClearITPendingBit(USART1, USART_IT_RTO);
 	}
 }
+void handle_cmd(uint8_t *cmd, uint8_t len)
+{
+}
 int main(void)
 {	
 	int i;
@@ -31,19 +34,23 @@ int main(void)
 	led_init();
 	delay_init(48);
 	Uart_Init();
-	//printf("float system on\r\n");
+	Init_MAX7219();
+	printf("float system on\r\n");
 	led(0);
+	set7219(13,11,1);
+	set7219(13,11,0);
+	set7219(3,1,1);
+	set7219(0,11,1);
+	set7219(13,0,1);
 	while(1) {
 		led(0);
 		__WFI();
-		//printf("stm32 wakeup\r\n");
 		if (uart_rx_ind) {
-			//printf("got cmd[%d]: ",cnt);
-			//for (i=0; i<cnt; i++)
-			//	printf("%02x ", rx_buf[i]);
-			//printf("\r\n");
-			led(1);
-			delay_ms(200);
+			printf("got cmd[%d]: ",cnt);
+			for (i=0; i<cnt; i++)
+				printf("%02x ", rx_buf[i]);
+			printf("\r\n");
+			handle_cmd(rx_buf, cnt);
 			uart_rx_ind = 0;			
 			cnt=0;
 		}
