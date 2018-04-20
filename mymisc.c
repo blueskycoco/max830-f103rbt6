@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stm32f0xx.h>
+#include <string.h>
 #include "mymisc.h"
 extern volatile uint8_t uart_rx_ind;
 USART_InitTypeDef USART_InitStructure;
@@ -256,6 +257,70 @@ void set7219(uint8_t x, uint8_t y, uint8_t on)
 	}
 	spi_send(cmd,8);
 }
+void ctl_7219(uint8_t on)
+{
+	int i;
+	uint8_t cmd[8] = {0};
+	if (on) {
+		memset(cur[0], 0xff, 8);
+		memset(cur[1], 0xff, 8);
+		memset(cur[2], 0xff, 8);
+		memset(cur[3], 0xff, 8);
+	} else {
+		memset(cur[0], 0x00, 8);
+		memset(cur[1], 0x00, 8);
+		memset(cur[2], 0x00, 8);
+		memset(cur[3], 0x00, 8);
+	}
+	for (i=0; i<8; i++) {
+		cmd[0] = i+1;
+		cmd[2] = i+1;
+		cmd[4] = i+1;
+		cmd[6] = i+1;
+		if (on) {
+			cmd[1] = 0xff;
+			cmd[3] = 0xff;
+			cmd[5] = 0xff;
+			cmd[7] = 0xff;
+		} else {
+			cmd[1] = 0x00;
+			cmd[3] = 0x00;
+			cmd[5] = 0x00;
+			cmd[7] = 0x00;
+		}
+		spi_send(cmd,8);
+	}
+}
+void horse(void)
+{
+	uint8_t i,j;
+	ctl_7219(0);
+	for (i=0; i<16; i++)
+		for (j=0; j<16; j++) {
+		set7219(i,j,1);	
+		if (j>0) {			
+			set7219(i,j-1,0);
+		} else if (i>0) {
+			set7219(i-1,j,0);
+		}
+		delay_ms(100);
+	}
+}
+void blink(uint8_t x, uint8_t y, uint8_t sec)
+{
+	int i,j;
+	if ( x >= 16 || y >= 16)
+		return;
+
+	for (i=0; i<sec; i++) {
+		for(j=0; j<5; j++) {
+			set7219(x,y,1);
+			delay_ms(100);
+			set7219(x,y,0);
+			delay_ms(100);
+		}
+	}
+}
 void Init_MAX7219()
 {
 	uint8_t cmd0[] = {0x09,0x00,0x09,0x00,0x09,0x00,0x09,0x00};
@@ -295,3 +360,6 @@ unsigned int CRC_check(unsigned char *Data,unsigned short Data_length)
 	return CRC1;
 }
 
+void lock_door(uint8_t on)
+{
+}
