@@ -8,7 +8,7 @@
 volatile uint8_t uart_rx_ind = 0;
 uint8_t cnt=0;
 uint8_t rx_buf[64] = {0};
-uint8_t door_status=0;
+uint8_t door_status=1;
 uint8_t lock_status=0;
 void USART1_IRQHandler(void)
 {
@@ -115,6 +115,7 @@ int main(void)
 	Init_MAX7219();
 	printf("float system on\r\n");
 	led(0);
+	lock_init();
 	while(1) {
 		led(0);
 		__WFI();

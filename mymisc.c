@@ -4,6 +4,9 @@
 #include <stm32f0xx.h>
 #include <string.h>
 #include "mymisc.h"
+#define TIMES 10
+extern uint8_t door_status;
+extern uint8_t lock_status;
 extern volatile uint8_t uart_rx_ind;
 USART_InitTypeDef USART_InitStructure;
 static unsigned char  fac_us=0;
@@ -66,7 +69,8 @@ void Uart_Init()
 	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
 	USART_InitStructure.USART_Parity = USART_Parity_No;
-	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_HardwareFlowControl = 
+		USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 	USART_Init(USART1, &USART_InitStructure);
 
@@ -107,14 +111,8 @@ void led(int on)
 void EXTI4_15_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(EXTI_Line6) != RESET)
-	{ 
-		if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6) == Bit_SET) {
-			led(1);
-			//printf("door close\r\n");
-		} else {
-			led(0);
-			//printf("door open\r\n");
-		}
+	{
+		door_status = GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6);
 		EXTI_ClearITPendingBit(EXTI_Line6);
 	}
 }
@@ -215,7 +213,7 @@ uint8_t spi_send(uint8_t *data,int len)
 	GPIO_SetBits(GPIOA,GPIO_Pin_4);
 	return result;
 }
-uint8_t cur[4][8] = {0};
+uint8_t cur[4][8] = {{0},{0},{0},{0}};
 /* x from 0 - 15
  * y from 0 - 15
  * on 0/1
@@ -362,4 +360,40 @@ unsigned int CRC_check(unsigned char *Data,unsigned short Data_length)
 
 void lock_door(uint8_t on)
 {
+	uint8_t Step_f[8]={0x08,0x0c,0x04,0x06,0x02,0x03,0x01,0x09};
+	uint8_t Step_r[8]={0x09,0x01,0x03,0x02,0x06,0x04,0x0c,0x08};
+	uint8_t *Step;
+	uint8_t i,j;
+	if (lock_status && on)
+		return;
+	if (!lock_status && !on)
+		return;
+	lock_status = on;
+	if (on) {
+		Step = Step_f;
+	} else {
+		Step = Step_r;
+	}
+	for (j=0; j<TIMES; j++) {
+		for (i=0; i<8; i++) {
+			GPIO_Write(GPIOA, Step[i]);
+			delay_us(100);
+		}
+		delay_ms(100);
+	}
+}
+
+void lock_init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	door_status = GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_6);
+	lock_door(0);
 }

@@ -18,4 +18,5 @@ void blink(uint8_t x, uint8_t y, uint8_t sec);
 void horse(void);
 unsigned int CRC_check(unsigned char *Data,unsigned short Data_length);
 void lock_door(uint8_t on);
+void lock_init(void);
 #endif
