@@ -4,7 +4,7 @@
 #include <stm32f0xx.h>
 #include <string.h>
 #include "mymisc.h"
-#define TIMES 10
+#define TIMES 200
 extern uint8_t door_status;
 extern uint8_t lock_status;
 extern volatile uint8_t uart_rx_ind;
@@ -172,11 +172,11 @@ void spi_init(void)
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 
 	SPI_InitStructure.SPI_Direction = SPI_Direction_1Line_Tx;
-	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+	SPI_InitStructure.SPI_DataSize = SPI_DataSize_16b;
 	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
 	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
@@ -198,17 +198,26 @@ static int check_status(uint8_t bit)
 	}
 	return 1;
 }
+void sent(uint16_t data) {
+		if(check_status(SPI_I2S_IT_TXE))
+			SPI_I2S_SendData16(SPI1, data);
+		else {
+#ifdef DEBUG
+			printf("spi send failed\r\n");
+#endif
+		}
+}
 uint8_t spi_send(uint8_t *data,int len)
 {
 	uint8_t result = 1;
 	int i;
 	GPIO_ResetBits(GPIOA,GPIO_Pin_4);
-	for(i=0;i<len;i++)
-	{
-		if(check_status(SPI_I2S_IT_TXE))
-			SPI_SendData8(SPI1, data[i]);
+	for(i=0;i<len;i=i+2)
+	{	
+		if (i<2)
+			sent((data[i]<<8)|data[i+1]);
 		else
-			result = 0;
+			sent(0);
 	}
 	GPIO_SetBits(GPIOA,GPIO_Pin_4);
 	return result;
@@ -256,7 +265,7 @@ void set7219(uint8_t x, uint8_t y, uint8_t on)
 		printf("\r\n");
 	}
 #endif
-	spi_send(cmd,8);
+	spi_send(cmd+index*2,(index+1)*2);
 }
 void ctl_7219(uint8_t on)
 {
@@ -289,6 +298,9 @@ void ctl_7219(uint8_t on)
 			cmd[5] = 0x00;
 			cmd[7] = 0x00;
 		}
+		spi_send(cmd,2);
+		spi_send(cmd,4);
+		spi_send(cmd,6);
 		spi_send(cmd,8);
 	}
 }
@@ -324,12 +336,30 @@ void blink(uint8_t x, uint8_t y, uint8_t sec)
 }
 void Init_MAX7219()
 {
-	uint8_t cmd0[] = {0x09,0x00,0x09,0x00,0x09,0x00,0x09,0x00};
-	uint8_t cmd1[] = {0x0a,0x03,0x0a,0x03,0x0a,0x03,0x0a,0x03};
-	uint8_t cmd2[] = {0x0b,0x07,0x0b,0x07,0x0b,0x07,0x0b,0x07};
-	uint8_t cmd3[] = {0x0c,0x01,0x0c,0x01,0x0c,0x01,0x0c,0x01};
-	uint8_t cmd4[] = {0x0f,0x00,0x0f,0x00,0x0f,0x00,0x0f,0x00};
+	uint8_t cmd0[] = {0x09,0x00};
+	uint8_t cmd1[] = {0x0a,0x03};
+	uint8_t cmd2[] = {0x0b,0x07};
+	uint8_t cmd3[] = {0x0c,0x01};
+	uint8_t cmd4[] = {0x0f,0x00};
 	spi_init();
+	spi_send(cmd0,2);
+	spi_send(cmd1,2);
+	spi_send(cmd2,2);
+	spi_send(cmd3,2);
+	spi_send(cmd4,2);	
+	
+	spi_send(cmd0,4);
+	spi_send(cmd1,4);
+	spi_send(cmd2,4);
+	spi_send(cmd3,4);
+	spi_send(cmd4,4);	
+	
+	spi_send(cmd0,6);
+	spi_send(cmd1,6);
+	spi_send(cmd2,6);
+	spi_send(cmd3,6);
+	spi_send(cmd4,6);	
+	
 	spi_send(cmd0,8);
 	spi_send(cmd1,8);
 	spi_send(cmd2,8);
@@ -380,9 +410,9 @@ void lock_door(uint8_t on)
 	for (j=0; j<TIMES; j++) {
 		for (i=0; i<8; i++) {
 			GPIO_Write(GPIOA, Step[i]);
-			delay_us(100);
+			delay_ms(2);
 		}
-		delay_ms(100);
+		delay_ms(3);
 	}
 }
 

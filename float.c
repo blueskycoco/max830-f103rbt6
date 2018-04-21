@@ -152,6 +152,7 @@ int main(void)
 				printf("%02x ", rx_buf[i]);
 			printf("\r\n");
 #endif
+			led(1);
 			handle_cmd(rx_buf, cnt);
 			uart_rx_ind = 0;			
 			cnt=0;
