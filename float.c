@@ -31,29 +31,41 @@ void cmd_dump(uint8_t *data)
 	uint8_t resp[8] = {0};
 	uint16_t crc;
 	uint8_t i;
+#ifdef DEBUG
 	printf("<======================================\r\n");
+#endif
 	switch (data[0])
 	{
 		case 0x00:
+#ifdef DEBUG
 			printf("Light %d %d, %s\r\n",
 					data[1],data[2],(data[3]==1)?"on":"off");
+#endif
 			set7219(data[1],data[2],data[3]);
 			break;
 		case 0x01:
+#ifdef DEBUG
 			printf("All led %s\r\n", (data[1]==1)?"on":"off");
+#endif
 			ctl_7219(data[1]);
 			break;
 		case 0x02:
+#ifdef DEBUG
 			printf("Horse lantern\r\n");
+#endif
 			horse();
 			break;
 		case 0x03:
+#ifdef DEBUG
 			printf("blink %d %d, %d sec\r\n",
 					data[1],data[2],data[3]);
+#endif
 			blink(data[1],data[2],data[3]);
 			break;
 		case 0x04:
+#ifdef DEBUG
 			printf("ask door status\r\n");
+#endif
 			resp[0] = MSG_HEAD0;resp[1] = MSG_HEAD1;
 			resp[2] = 4; resp[3] = 0x84;
 			resp[4] = door_status;
@@ -64,7 +76,9 @@ void cmd_dump(uint8_t *data)
 				PutChar(resp[i]);
 			break;
 		case 0x05:
+#ifdef DEBUG
 			printf("ask lock status\r\n");
+#endif
 			resp[0] = MSG_HEAD0;resp[1] = MSG_HEAD1;
 			resp[2] = 4; resp[3] = 0x85;
 			resp[4] = lock_status;
@@ -75,14 +89,20 @@ void cmd_dump(uint8_t *data)
 				PutChar(resp[i]);
 			break;
 		case 0x06:
+#ifdef DEBUG
 			printf("%s door\r\n", (data[1]==1)?"lock":"unlock");
+#endif
 			lock_door(data[1]);
 			break;
 		default:
+#ifdef DEBUG
 			printf("unknown cmd\r\n");
+#endif
 			break;
 	}
+#ifdef DEBUG
 	printf("======================================>\r\n");
+#endif
 }
 /* cmd format
  * 0x6c 0xaa len xx xx ... crc0 crc1
@@ -91,15 +111,19 @@ void handle_cmd(uint8_t *cmd, uint8_t len)
 {
 	uint8_t packet_len;
 	if (cmd[0] != MSG_HEAD0 || cmd[1] != MSG_HEAD1) {
+#ifdef DEBUG
 		printf("invaild cmd\r\n");
+#endif
 		return;
 	}
 
 	packet_len = cmd[2];
 	uint16_t crc = CRC_check(cmd, packet_len+1);
 	if (crc != ((cmd[packet_len+1]<<8)|cmd[packet_len+2])) {
+#ifdef DEBUG
 		printf("crc failed %04x %04x\r\n", crc,
 				((cmd[packet_len+1]<<8)|cmd[packet_len+2]));
+#endif
 		return;
 	}
 	cmd_dump(cmd+3);
@@ -107,23 +131,27 @@ void handle_cmd(uint8_t *cmd, uint8_t len)
 
 int main(void)
 {	
-	int i;
 	EXTI6_Config();
 	led_init();
 	delay_init(48);
 	Uart_Init();
 	Init_MAX7219();
+#ifdef DEBUG
 	printf("float system on\r\n");
+#endif
 	led(0);
 	lock_init();
 	while(1) {
 		led(0);
 		__WFI();
 		if (uart_rx_ind) {
+#ifdef DEBUG
+			int i;
 			printf("got cmd[%d]: ",cnt);
 			for (i=0; i<cnt; i++)
 				printf("%02x ", rx_buf[i]);
 			printf("\r\n");
+#endif
 			handle_cmd(rx_buf, cnt);
 			uart_rx_ind = 0;			
 			cnt=0;

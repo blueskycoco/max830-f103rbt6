@@ -222,7 +222,7 @@ uint8_t cur[4][8] = {{0},{0},{0},{0}};
  */
 void set7219(uint8_t x, uint8_t y, uint8_t on)
 {
-	uint8_t i,j,index=0;
+	uint8_t i,index=0;
 	uint8_t cmd[8] = {0};
 	uint8_t tmp_x = x%8;
 	uint8_t tmp_y = y%8;
@@ -246,6 +246,8 @@ void set7219(uint8_t x, uint8_t y, uint8_t on)
 	cmd[0] = cmd[2] = cmd[4] = cmd[6] = tmp_x+1;
 	for (i=1; i<8; i=i+2)
 		cmd[i] = cur[(i-1)/2][tmp_x];
+#ifdef DEBUG
+	uint8_t j;
 	printf("cmd %02x %02x %02x %02x %02x %02x %02x %02x\r\ncur:\r\n",
 			cmd[0],cmd[1],cmd[2],cmd[3],cmd[4],cmd[5],cmd[6],cmd[7]);
 	for (i=0; i<4; i++) {
@@ -253,6 +255,7 @@ void set7219(uint8_t x, uint8_t y, uint8_t on)
 			printf("%02x ", cur[i][j]);
 		printf("\r\n");
 	}
+#endif
 	spi_send(cmd,8);
 }
 void ctl_7219(uint8_t on)
