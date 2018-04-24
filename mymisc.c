@@ -193,6 +193,17 @@ static int check_status(uint8_t bit)
 	{
 		i++;
 		if(i==100){
+			printf("send timeout\r\n");
+			return 0;
+		}
+		delay_us(1);
+	}
+	i=0;
+	while(SPI_I2S_GetITStatus(SPI1,SPI_SR_BSY)==SET)
+	{
+		i++;
+		if(i==100){
+			printf("send 2 timeout\r\n");
 			return 0;
 		}
 		delay_us(1);
@@ -209,7 +220,7 @@ uint8_t spi_send(uint8_t *data,int len)
 		SPI_SendData8(SPI1, data[i]);
 		check_status(SPI_I2S_IT_TXE);
 	}
-	delay_us(80);
+	//delay_us(80);
 	GPIO_SetBits(GPIOA,GPIO_Pin_4);
 	return result;
 }
