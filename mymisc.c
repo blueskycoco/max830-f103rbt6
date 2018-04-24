@@ -198,7 +198,7 @@ static int check_status(uint8_t bit)
 		}
 		delay_us(1);
 	}
-	i=0;
+/*	i=0;
 	while(SPI_I2S_GetITStatus(SPI1,SPI_SR_BSY)==SET)
 	{
 		i++;
@@ -207,7 +207,7 @@ static int check_status(uint8_t bit)
 			return 0;
 		}
 		delay_us(1);
-	}
+	}*/
 	return 1;
 }
 uint8_t spi_send(uint8_t *data,int len)
