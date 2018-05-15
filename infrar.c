@@ -24,12 +24,6 @@ extern void SWO_Enable(void);
 #define STATE_ASK_CC1101_ADDR		0
 #define STATE_PROTECT_ON			2
 
-#ifdef MASTER
-unsigned short can_addr				= 3;
-uint32_t addr_buf[1024] 			= {0};
-unsigned char protect_status 		= 0;
-uint16_t get_addr_offs(uint32_t id);
-#endif
 unsigned char g_cnt 				= 0;
 unsigned char g_state 				= STATE_ASK_CC1101_ADDR;
 unsigned char b_protection_state 	= 0;	/*protection state*/
@@ -44,6 +38,12 @@ void int_init()
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+
+	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_2;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_7;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -161,50 +161,12 @@ void EXTI15_10_IRQHandler(void)
 	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
 	{
 		key |= KEY_INFRAR;
-#ifdef MASTER
-/*	unsigned char cmd[8] = {0};
-			cmd[0] = 0x00;cmd[1]=0x11;
-			cmd[2] = 0x00;
-			cmd[3] = 0x00;
-			for (int i=3; i<can_addr; i++) {
-				cmd[4]= (addr_buf[i] >> 24) & 0xff;
-				cmd[5]= (addr_buf[i] >> 16) & 0xff;
-				cmd[6]= (addr_buf[i] >> 8) & 0xff;
-				cmd[7]= (addr_buf[i] >> 0) & 0xff;
-				if (0 == can_send(i,cmd,8))
-				{
-					delay_ms(20);
-					can_send(i,cmd,8);
-				}				
-			}
-*/
-		protect_status = 0;
-#endif
 		EXTI_ClearITPendingBit(EXTI_Line13);
 	}
 
 	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
 	{
 		key |= KEY_S1;
-#ifdef MASTER
-	/*unsigned char cmd[8] = {0};
-			cmd[0] = 0x00;cmd[1]=0x11;
-			cmd[2] = 0x00;
-			cmd[3] = 0x01;
-			for (int i=3; i<can_addr; i++) {
-				cmd[4]= (addr_buf[i] >> 24) & 0xff;
-				cmd[5]= (addr_buf[i] >> 16) & 0xff;
-				cmd[6]= (addr_buf[i] >> 8) & 0xff;
-				cmd[7]= (addr_buf[i] >> 0) & 0xff;
-				if (0 == can_send(i,cmd,8))
-				{
-					delay_ms(20);
-					can_send(i,cmd,8);
-				}				
-			}
-			*/
-		protect_status = 1;
-#endif
 		EXTI_ClearITPendingBit(EXTI_Line12);
 	}
 
@@ -386,47 +348,7 @@ void CAN1_RX0_IRQHandler(void)
 {
 	printf("can1 rx0 %d\r\n", CAN_GetITStatus(CAN1,CAN_IT_FMP0));
 	if (CAN_GetITStatus(CAN1,CAN_IT_FMP0) != RESET) { 
-#ifdef MASTER
-		key |= KEY_CAN;
-	unsigned char resp[8] = {0};
-	unsigned char cmd[8] = {0};
-	unsigned char len = 32;
-	unsigned short stdid = 0;
-	uint16_t addr;
-	uint32_t id;
-			if ((stdid = can_read(resp, &len)) != 0) {
-				id = resp[4];
-				id = (id<<8) + resp[5];
-				id = (id<<8) + resp[6];
-				id = (id<<8) + resp[7];
-				addr = get_addr_offs(id);
-				printf("addr %d, id %08x \r\n",addr,id);
-				if (resp[0] == 0x00 && resp[1] == 0x00)
-				{   //assign can addr
-					cmd[0] = 0x00;cmd[1]=0x01;
-					cmd[2] = (addr >> 8) & 0xff;
-					cmd[3] = addr&0xff;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(2,cmd,8);
-				} else if (resp[0] == 0x00 && resp[1] == 0x06) {
-					//alarm
-					cmd[0] = 0x00;cmd[1]=0x07;
-					cmd[2] = resp[2];
-					cmd[3] = protect_status;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(addr,cmd,8);				  
-				} else if (resp[0] == 0x00 && resp[1] == 0x10) {
-					//curr status
-					cmd[0] = 0x00;cmd[1]=0x11;
-					cmd[2] = resp[2];
-					cmd[3] = protect_status;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(addr,cmd,8);				  
-				}
-			}			
-#else
-			handle_can_resp();
-#endif
+		handle_can_resp();
 		CAN_ClearITPendingBit(CAN1, CAN_IT_FMP0);
 	}
 }
@@ -435,93 +357,6 @@ void CAN1_RX0_IRQHandler(void)
  * 00 00 02 d1 00 00 00 01 (stdid = 0x01 , req can addr)
  * 00 01 xx xx 00 00 00 01 (stdid = 0x02 , ack can addr)
  */
-#ifdef MASTER
-uint16_t get_addr_offs(uint32_t id)
-{
-	int i=3;
-	for (i=3;i<can_addr;i++)
-	{
-		printf("i %d, can_addr %d, id %x , addr_buf %x\r\n",
-				i,can_addr,id,addr_buf[i]);
-		if (id == addr_buf[i])
-			break;
-	}
-	if (i==can_addr)
-	{
-		addr_buf[i] = id;
-		can_addr++;
-		return can_addr-1;
-	}
-
-	return i;
-}
-void task()
-{		
-	unsigned char resp[8] = {0};
-	unsigned char cmd[8] = {0};
-	unsigned char len = 32;
-	unsigned short stdid = 0;
-	uint16_t addr;
-	uint32_t id;
-	led(1);
-	delay_ms(1000);
-	led(0);	
-	delay_ms(1000);
-	led(1);
-	delay_ms(1000);
-	led(0);
-	printf("begin recv slave req\r\n");
-	while(1);
-	while (1) {
-		if (key & KEY_S1) {
-			key &= ~KEY_S1;
-			printf("protection on\r\n");
-			cmd[0] = 0x00;cmd[1]=0x11;
-			cmd[2] = 0x00;
-			cmd[3] = 0x01;
-			can_send(2,cmd,8);					
-		}
-
-		if (key & KEY_INFRAR) {
-			key &= ~KEY_INFRAR;
-			printf("protection off\r\n");
-			cmd[0] = 0x00;cmd[1]=0x11;
-			cmd[2] = 0x00;
-			cmd[3] = 0x00;
-			can_send(2,cmd,8);					
-		}
-
-		if (key & KEY_CAN) {
-			key &= ~KEY_CAN;
-			printf("can data in\r\n");
-			if ((stdid = can_read(resp, &len)) != 0) {
-				id = resp[4];
-				id = (id<<8) + resp[5];
-				id = (id<<8) + resp[6];
-				id = (id<<8) + resp[7];
-				addr = get_addr_offs(id);
-				printf("addr %d, id %08x \r\n",addr,id);
-				if (resp[0] == 0x00 && resp[1] == 0x00)
-				{   //assign can addr
-					cmd[0] = 0x00;cmd[1]=0x01;
-					cmd[2] = (addr >> 8) & 0xff;
-					cmd[3] = addr&0xff;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(2,cmd,8);
-				} else if (resp[0] == 0x00 && resp[1] == 0x06) {
-					//alarm
-					cmd[0] = 0x00;cmd[1]=0x07;
-					cmd[2] = resp[2];
-					cmd[3] = protect_status;
-					memcpy(cmd+4, resp+4, 4);
-					can_send(addr,cmd,8);				  
-				}
-			}			
-		}
-	}
-	return ;
-}
-#else
 void task()
 {
 	led(1);
@@ -575,7 +410,6 @@ void task()
 	}
 	return ;
 }
-#endif
 
 int main(void)
 {	
