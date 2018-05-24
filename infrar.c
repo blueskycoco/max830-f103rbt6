@@ -7,11 +7,13 @@
 #include "can.h"
 
 #define ID_CODE						0x00000001
-
+#define FACT_TIME					0x12345678
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
 #define CMD_REG_CODE				0x0000
 #define CMD_REG_CODE_ACK			0x0001
+#define CMD_INFO_CODE				0x0002
+#define CMD_INFO_CODE_ACK			0x0003
 #define CMD_ALARM					0x0006
 #define CMD_ALARM_ACK				0x0007
 #define CMD_CUR_STATUS				0x0010
@@ -23,7 +25,7 @@ extern void SWO_Enable(void);
 #define KEY_CAN						0x10
 #define STATE_ASK_CC1101_ADDR		0
 #define STATE_PROTECT_ON			2
-
+#define STATE_UPDATE_INFO			1
 unsigned char g_cnt 				= 0;
 unsigned char g_state 				= STATE_ASK_CC1101_ADDR;
 unsigned char b_protection_state 	= 0;	/*protection state*/
@@ -36,9 +38,15 @@ void int_init()
 	GPIO_InitTypeDef   GPIO_InitStructure;
 	NVIC_InitTypeDef   NVIC_InitStructure;
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
-
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable , ENABLE);
+  	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+  	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  	GPIO_Init(GPIOB, &GPIO_InitStructure);
+
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 
@@ -152,7 +160,6 @@ void EXTI9_5_IRQHandler(void)
 	if(EXTI_GetITStatus(EXTI_Line7) != RESET)
 	{
 		key |= KEY_CAN;
-		printf("int7\r\n");
 		EXTI_ClearITPendingBit(EXTI_Line7);
 	}
 }
@@ -212,6 +219,23 @@ void handle_can_addr(uint8_t *id, uint8_t res)
 	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
+	can_send(0x01, cmd, ofs);
+	//if (poll_can())
+	//		handle_can_resp();
+
+}
+void handle_can_info(uint8_t *id, uint8_t res) 
+{	
+	unsigned char cmd[32] = {0x00};
+	unsigned char ofs = 0;
+	cmd[ofs++] = (CMD_INFO_CODE >> 8) & 0xff;
+	cmd[ofs++] = CMD_INFO_CODE & 0xff;
+	cmd[ofs++] = DEVICE_TYPE & 0xff;
+	cmd[ofs++] = ((long)FACT_TIME >> 24) & 0xff;
+	cmd[ofs++] = ((long)FACT_TIME >> 16) & 0xff;
+	cmd[ofs++] = ((long)FACT_TIME >> 8) & 0xff;
+	cmd[ofs++] = ((long)FACT_TIME >> 0) & 0xff;
+	cmd[ofs++] = 0x00;
 	can_send(0x01, cmd, ofs);
 	//if (poll_can())
 	//		handle_can_resp();
@@ -277,10 +301,12 @@ void handle_can_resp()
 			case CMD_REG_CODE_ACK:
 				set_id(resp[2]<<8 | resp[3]);	
 				printf("set new id %d\r\n",resp[2]<<8|resp[3]);
+				g_state = STATE_UPDATE_INFO;		
+				break;
+			case CMD_INFO_CODE_ACK:
 				g_state = STATE_PROTECT_ON;		
 				g_cnt = 0;
 				break;
-
 			case CMD_ALARM_ACK:
 				g_cnt = 0;
 				if (b_protection_state != resp[3]) {
@@ -321,7 +347,7 @@ void reconfig_rtc(int sec)
 }
 void handle_timer()
 {
-	printf("handle timer in %d\r\n",g_cnt);
+	printf("handle timer in %d, state %d\r\n",g_cnt,g_state);
 	if (g_cnt > 3) {
 		g_state	= STATE_ASK_CC1101_ADDR;
 		last_sub_cmd = 0;	
@@ -331,16 +357,19 @@ void handle_timer()
 	}
 	if (g_state == STATE_ASK_CC1101_ADDR)
 		handle_can_addr(NULL, 0);
+	else if (g_state == STATE_UPDATE_INFO) {
+		handle_can_info(NULL, 0);
+	}
 	else {
 		if (last_sub_cmd & 0x01)
 			handle_can_cmd(CMD_ALARM,0x02);
-		if (b_protection_state) {
+		//if (b_protection_state) {
 			if (last_sub_cmd & 0x02)
 				handle_can_cmd(CMD_ALARM,0x01);
-		} else {
-			last_sub_cmd &= ~0x02;
-			handle_can_cmd(CMD_CUR_STATUS,0x01);
-		}
+		//} else {
+		//	last_sub_cmd &= ~0x02;
+		//	handle_can_cmd(CMD_CUR_STATUS,0x01);
+		//}
 
 	}
 }
@@ -373,7 +402,7 @@ void task()
 		led(1);
 		SYSCLKConfig_STOP();		
 		delay_ms(10);
-		printf("leave stop\r\n");
+		printf("leave stop %02x\r\n",key);
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
 			printf("handle timer\r\n");
@@ -397,14 +426,14 @@ void task()
 			printf("can data in\r\n");
 			handle_can_resp();
 		}
-		printf("enter stop\r\n");
+		printf("enter stop %02x\r\n",key);
 		delay_ms(30);
 		led(0);
 
 		if (!b_protection_state || last_sub_cmd !=0 || 
 				g_state != STATE_PROTECT_ON)
 		{
-			printf("%d %d %d\r\n",b_protection_state,last_sub_cmd,g_state);
+			printf("%d %d %d %02x\r\n",b_protection_state,last_sub_cmd,g_state,key);
 			reconfig_rtc(5);
 		}
 	}
