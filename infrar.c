@@ -32,6 +32,7 @@ unsigned char b_protection_state 	= 0;	/*protection state*/
 /*0x01 s1_alarm, 0x02 infrar_alarm, 0x04 low_power_alarm, 0x08 cur_status*/
 unsigned char last_sub_cmd 			= 0x00; 
 volatile unsigned char key 			= 0x0;
+unsigned char g_id 					= 0x01;
 void int_init()
 {
 	EXTI_InitTypeDef   EXTI_InitStructure;
@@ -301,6 +302,7 @@ void handle_can_resp()
 			case CMD_REG_CODE_ACK:
 				set_id(resp[2]<<8 | resp[3]);	
 				printf("set new id %d\r\n",resp[2]<<8|resp[3]);
+				g_id = (resp[2]<<8) | resp[3];
 				g_state = STATE_UPDATE_INFO;		
 				break;
 			case CMD_INFO_CODE_ACK:
