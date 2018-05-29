@@ -6,7 +6,7 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ID_CODE						0x00000001
+#define ID_CODE						0x00000002
 #define FACT_TIME					0x12345678
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
@@ -231,12 +231,12 @@ void handle_can_info(uint8_t *id, uint8_t res)
 	unsigned char ofs = 0;
 	cmd[ofs++] = (CMD_INFO_CODE >> 8) & 0xff;
 	cmd[ofs++] = CMD_INFO_CODE & 0xff;
+	cmd[ofs++] = g_id;
 	cmd[ofs++] = DEVICE_TYPE & 0xff;
 	cmd[ofs++] = ((long)FACT_TIME >> 24) & 0xff;
 	cmd[ofs++] = ((long)FACT_TIME >> 16) & 0xff;
 	cmd[ofs++] = ((long)FACT_TIME >> 8) & 0xff;
 	cmd[ofs++] = ((long)FACT_TIME >> 0) & 0xff;
-	cmd[ofs++] = 0x00;
 	can_send(0x01, cmd, ofs);
 	//if (poll_can())
 	//		handle_can_resp();
@@ -248,8 +248,8 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 	unsigned char ofs = 0;
 	cmd[ofs++] = (main_cmd >> 8) & 0xff;
 	cmd[ofs++] = main_cmd & 0xff;
+	cmd[ofs++] = g_id;
 	cmd[ofs++] = sub_cmd;
-	cmd[ofs++] = DEVICE_TYPE;
 	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
@@ -307,6 +307,9 @@ void handle_can_resp()
 				break;
 			case CMD_INFO_CODE_ACK:
 				g_state = STATE_PROTECT_ON;		
+				if (b_protection_state != resp[3]) {
+					switch_protect(resp[3]);
+				}
 				g_cnt = 0;
 				break;
 			case CMD_ALARM_ACK:
@@ -365,13 +368,13 @@ void handle_timer()
 	else {
 		if (last_sub_cmd & 0x01)
 			handle_can_cmd(CMD_ALARM,0x02);
-		//if (b_protection_state) {
+		if (b_protection_state) {
 			if (last_sub_cmd & 0x02)
 				handle_can_cmd(CMD_ALARM,0x01);
-		//} else {
-		//	last_sub_cmd &= ~0x02;
-		//	handle_can_cmd(CMD_CUR_STATUS,0x01);
-		//}
+		} else {
+			last_sub_cmd &= ~0x02;
+			handle_can_cmd(CMD_CUR_STATUS,0x01);
+		}
 
 	}
 }
