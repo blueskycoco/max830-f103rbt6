@@ -6,7 +6,7 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ID_CODE						0x00000002
+#define ID_CODE						0x00000001
 #define FACT_TIME					0x12345678
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
@@ -331,6 +331,7 @@ void handle_can_resp()
 				printf("new addr\t%x\r\n",resp[2]<<8|resp[3]);
 				g_id = (resp[2]<<8) | resp[3];
 				g_state = STATE_UPDATE_INFO;		
+				g_cnt = 0;				
 				break;
 			case CMD_INFO_CODE_ACK:
 				g_state = STATE_PROTECT_ON;		
