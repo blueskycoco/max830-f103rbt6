@@ -47,7 +47,11 @@ int can_send(unsigned short id, unsigned char *payload,
 	printf("\r\n");
 #endif
 	TransmitMailbox = CAN_Transmit(CANx, &TxMessage);
-	printf("can send error %x\r\n",CAN_GetLastErrorCode(CANx));
+	int result = CAN_GetLastErrorCode(CANx);
+	printf("can send error %x\r\n",result);
+	if (result !=0)
+		return 0;
+
 	if (TransmitMailbox == CAN_TxStatus_NoMailBox) {
 		return 0;
 	}
@@ -58,7 +62,7 @@ int can_send(unsigned short id, unsigned char *payload,
 	{
 		i++;
 	}
-	printf("i is %x\r\n", i);
+//	printf("i is %x\r\n", i);
 	if (i == 0xFFFF)
 		return 0;
 	
@@ -71,7 +75,7 @@ int can_read(unsigned char *buf, unsigned char *buf_len)
 	//if (num == 0)
 	//	return 0;
 	CAN_Receive(CAN1, CAN_FIFO0, &RxMessage);
-#ifdef DEBUG
+#if 0//def DEBUG
 	//printf("pending message %d\r\n", num);
 	printf("DLC %x, ExtId %x, FMI %x, IDE %x, RTR %x, StdId %x\r\n",
 			RxMessage.DLC,(unsigned int)RxMessage.ExtId,RxMessage.FMI,

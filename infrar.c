@@ -220,7 +220,14 @@ void handle_can_addr(uint8_t *id, uint8_t res)
 	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
 	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
-	can_send(0x01, cmd, ofs);
+	if (!can_send(0x01, cmd, ofs)) {
+		can_init();
+		g_state	= STATE_ASK_CC1101_ADDR;
+		last_sub_cmd = 0;	
+		b_protection_state = 0;
+		switch_protect(0);
+		set_id(0x02);	
+	}
 	//if (poll_can())
 	//		handle_can_resp();
 
@@ -237,7 +244,14 @@ void handle_can_info(uint8_t *id, uint8_t res)
 	cmd[ofs++] = ((long)FACT_TIME >> 16) & 0xff;
 	cmd[ofs++] = ((long)FACT_TIME >> 8) & 0xff;
 	cmd[ofs++] = ((long)FACT_TIME >> 0) & 0xff;
-	can_send(0x01, cmd, ofs);
+	if (!can_send(0x01, cmd, ofs)) {
+		can_init();
+		g_state	= STATE_ASK_CC1101_ADDR;
+		last_sub_cmd = 0;	
+		b_protection_state = 0;
+		switch_protect(0);
+		set_id(0x02);	
+	}
 	//if (poll_can())
 	//		handle_can_resp();
 
@@ -264,7 +278,14 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 		last_sub_cmd |= 0x08;
 	}
 	g_cnt++;
-	can_send(0x01, cmd, ofs);
+	if (!can_send(0x01, cmd, ofs)) {
+		can_init();
+		g_state	= STATE_ASK_CC1101_ADDR;
+		last_sub_cmd = 0;	
+		b_protection_state = 0;
+		switch_protect(0);
+		set_id(0x02);	
+	}
 	//if (poll_can())
 	//		handle_can_resp();
 }
@@ -295,13 +316,19 @@ void handle_can_resp()
 		id = (id << 8) + resp[5];
 		id = (id << 8) + resp[6];
 		id = (id << 8) + resp[7];
-		if (ID_CODE !=id)
+		if (ID_CODE !=id) {
+			printf("id %08x is not correct %08x\r\n", 
+					id, ID_CODE);
 			return ;
+		}
+		printf("<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\r\n");
+		printf("id\t\t%08x\r\n", id);
 		cmd_type = resp[0]<<8 | resp[1];
 		switch (cmd_type) {
 			case CMD_REG_CODE_ACK:
 				set_id(resp[2]<<8 | resp[3]);	
-				printf("set new id %d\r\n",resp[2]<<8|resp[3]);
+				printf("resp\t\tassign addr\r\n");
+				printf("new addr\t%x\r\n",resp[2]<<8|resp[3]);
 				g_id = (resp[2]<<8) | resp[3];
 				g_state = STATE_UPDATE_INFO;		
 				break;
@@ -310,7 +337,10 @@ void handle_can_resp()
 				if (b_protection_state != resp[3]) {
 					switch_protect(resp[3]);
 				}
-				g_cnt = 0;
+				g_cnt = 0;				
+				printf("resp\t\tregister done\r\n");
+				printf("status\t\t%s\r\n", (resp[3]==0)?"che fang":"bu fang");
+				printf("can addr\t%x\r\n", g_id);
 				break;
 			case CMD_ALARM_ACK:
 				g_cnt = 0;
@@ -327,6 +357,10 @@ void handle_can_resp()
 					default:
 						break;		
 				}
+				printf("resp\t\talarm ack\r\n");
+				printf("status\t\t%s\r\n", (resp[3]==0)?"che fang":"bu fang");
+				printf("alarm\t\t%d\r\n", resp[2]);
+				printf("can addr\t%x\r\n", g_id);
 				break;
 			case CMD_CUR_STATUS_ACK:
 				g_cnt = 0;
@@ -335,10 +369,14 @@ void handle_can_resp()
 				}
 				if (cmd_type == CMD_CUR_STATUS_ACK)
 					last_sub_cmd &= ~0x08;
+				printf("resp\t\tack status\r\n");
+				printf("status\t\t%s\r\n", (resp[3]==0)?"che fang":"bu fang");
+				printf("can addr\t%x\r\n", g_id);
 				break;
 			default:
 				break;
 		}
+		printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$>\r\n");
 
 	}
 }
@@ -380,7 +418,7 @@ void handle_timer()
 }
 void CAN1_RX0_IRQHandler(void)
 {
-	printf("can1 rx0 %d\r\n", CAN_GetITStatus(CAN1,CAN_IT_FMP0));
+	//printf("can1 rx0 %d\r\n", CAN_GetITStatus(CAN1,CAN_IT_FMP0));
 	if (CAN_GetITStatus(CAN1,CAN_IT_FMP0) != RESET) { 
 		handle_can_resp();
 		CAN_ClearITPendingBit(CAN1, CAN_IT_FMP0);
