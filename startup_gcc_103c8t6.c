@@ -108,7 +108,7 @@ void (* const g_pfnVectors[])(void) =
 	 CAN1_RX0_IRQHandler,    //	USB_LP_CAN1_RX0_IRQHandler
 	 IntDefaultHandler,    //	CAN1_RX1_IRQHandler
 	 IntDefaultHandler,    //	CAN1_SCE_IRQHandler
-	 EXTI9_5_IRQHandler,    //	EXTI9_5_IRQHandler
+	 IntDefaultHandler,    //	EXTI9_5_IRQHandler
 	 IntDefaultHandler,    //	TIM1_BRK_IRQHandler
 	 IntDefaultHandler,    //	TIM1_UP_IRQHandler
 	 IntDefaultHandler,    //	TIM1_TRG_COM_IRQHandler

@@ -53,16 +53,16 @@ void int_init()
 
 	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_2;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_7;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;//|GPIO_Pin_13|GPIO_Pin_7;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;//GPIO_Mode_IN_FLOATING;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
-	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);
+	//GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
-	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource7);
-	EXTI_InitStructure.EXTI_Line = EXTI_Line12|EXTI_Line13|EXTI_Line7;
+	//GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource7);
+	EXTI_InitStructure.EXTI_Line = EXTI_Line13;//|EXTI_Line12|EXTI_Line7;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -168,15 +168,20 @@ void EXTI15_10_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
 	{
+		if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_13) == RESET) {
 		key |= KEY_INFRAR;
+		printf("infrar int\r\n");
+		//	if (b_protection_state)
+		//		handle_can_cmd(CMD_ALARM, 0x01);
+		}
 		EXTI_ClearITPendingBit(EXTI_Line13);
 	}
 
-	if(EXTI_GetITStatus(EXTI_Line12) != RESET)
-	{
-		key |= KEY_S1;
-		EXTI_ClearITPendingBit(EXTI_Line12);
-	}
+	//if(EXTI_GetITStatus(EXTI_Line12) != RESET)
+	//{
+	//	key |= KEY_S1;
+	//	EXTI_ClearITPendingBit(EXTI_Line12);
+	//}
 
 }
 void RTCAlarm_IRQHandler(void)
@@ -391,7 +396,7 @@ void reconfig_rtc(int sec)
 }
 void handle_timer()
 {
-	printf("handle timer in %d, state %d\r\n",g_cnt,g_state);
+	printf("handle timer in %d, state %d, key %x\r\n",g_cnt,g_state,key);
 	if (g_cnt > 3) {
 		g_state	= STATE_ASK_CC1101_ADDR;
 		last_sub_cmd = 0;	
@@ -442,21 +447,23 @@ void task()
 	printf("begin to ask addr\r\n");
 	reconfig_rtc(1);
 	while (1) {
-		PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-		led(1);
-		SYSCLKConfig_STOP();		
-		delay_ms(10);
+		//key = 0;
+		//PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+		//led(1);
+		//SYSCLKConfig_STOP();		
+		//delay_ms(10);
+		if (key != 0) {
 		printf("leave stop %02x\r\n",key);
 		if (key & KEY_TIMER) {
 			key &= ~KEY_TIMER;
 			printf("handle timer\r\n");
 			handle_timer();
 		}
-		if (key & KEY_S1) {
-			key &= ~KEY_S1;
-			printf("S1 pressed\r\n");
-			handle_can_cmd(CMD_ALARM, 0x02);
-		}
+//		if (key & KEY_S1) {
+//			key &= ~KEY_S1;
+//			printf("S1 pressed\r\n");
+//			handle_can_cmd(CMD_ALARM, 0x02);
+//		}
 
 		if (key & KEY_INFRAR) {
 			key &= ~KEY_INFRAR;
@@ -465,13 +472,13 @@ void task()
 				handle_can_cmd(CMD_ALARM, 0x01);
 		}
 
-		if (key & KEY_CAN) {
-			key &= ~KEY_CAN;
-			printf("can data in\r\n");
-			handle_can_resp();
-		}
+//		if (key & KEY_CAN) {
+//			key &= ~KEY_CAN;
+//			printf("can data in\r\n");
+//			handle_can_resp();
+//		}
 		printf("enter stop %02x\r\n",key);
-		delay_ms(30);
+		//delay_ms(30);
 		led(0);
 
 		if (!b_protection_state || last_sub_cmd !=0 || 
@@ -480,6 +487,8 @@ void task()
 			printf("%d %d %d %02x\r\n",b_protection_state,last_sub_cmd,g_state,key);
 			reconfig_rtc(5);
 		}
+		} else 
+			delay_ms(100);
 	}
 	return ;
 }
