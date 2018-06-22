@@ -6,8 +6,8 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ID_CODE						0x00000001
-#define FACT_TIME					0x12345678
+#define ID_CODE						0x0000000a
+#define FACT_TIME					0x00180622
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
 #define CMD_REG_CODE				0x0000
