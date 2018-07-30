@@ -128,7 +128,11 @@ void handle_cmd(uint8_t *cmd, uint8_t len)
 	}
 	cmd_dump(cmd+3);
 }
-
+uint8_t off[] = {0x6c,0xaa,0x04,0x01,0x00,0x80,0xd5};
+uint8_t on[] = {0x6c,0xaa,0x04,0x01,0x01,0x40,0x14};
+uint8_t lock[] = {0x6c,0xaa,0x04,0x06,0x00,0xb0,0xd7};
+uint8_t unlock[] = {0x6c,0xaa,0x04,0x06,0x01,0x70,0x16};
+uint8_t horse1[] = {0x6c,0xaa,0x03,0x02,0x65,0xbc};
 int main(void)
 {	
 	EXTI6_Config();
@@ -136,11 +140,38 @@ int main(void)
 	delay_init(48);
 	Uart_Init();
 	Init_MAX7219();
+			uart_ctl(0);
 #ifdef DEBUG
 	printf("float system on\r\n");
 #endif
+	uart_ctl(1);
 	led(0);
 	lock_init();
+	ctl_7219(0);
+/*while(1) {
+	led(0);
+	delay_ms(1000);
+	led(1);
+	delay_ms(1000);
+}*/
+#if 0
+	handle_cmd(on, sizeof(on));
+	delay_ms(1000);
+		led(0);
+	handle_cmd(off, sizeof(off));
+	delay_ms(1000);
+		led(1);
+	handle_cmd(unlock, sizeof(unlock));
+	delay_ms(1000);
+		led(0);
+	handle_cmd(lock, sizeof(lock));
+	delay_ms(1000);
+		led(1);
+	handle_cmd(horse1, sizeof(horse1));
+	delay_ms(1000);
+		led(0);
+	//return 0;
+#endif
 	while(1) {
 		led(0);
 		__WFI();
@@ -153,7 +184,9 @@ int main(void)
 			printf("\r\n");
 #endif
 			led(1);
+			uart_ctl(0);
 			handle_cmd(rx_buf, cnt);
+			uart_ctl(1);
 			uart_rx_ind = 0;			
 			cnt=0;
 		}

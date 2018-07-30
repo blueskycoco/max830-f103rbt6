@@ -89,12 +89,18 @@ void led_init()
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOF, ENABLE);
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_Init(GPIOF, &GPIO_InitStructure);
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_Init(GPIOF, &GPIO_InitStructure);
 }
 void led(int on)
 {
@@ -107,7 +113,19 @@ void led(int on)
 		GPIO_SetBits(GPIOB,GPIO_Pin_1);
 	}
 }
-
+void uart_ctl(int flag)
+{
+	if (flag)
+	{
+		GPIO_ResetBits(GPIOF,GPIO_Pin_0);
+		GPIO_ResetBits(GPIOF,GPIO_Pin_1);
+	}
+	else
+	{
+		GPIO_SetBits(GPIOF,GPIO_Pin_1);
+		GPIO_SetBits(GPIOF,GPIO_Pin_0);
+	}
+}
 void EXTI4_15_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(EXTI_Line6) != RESET)
