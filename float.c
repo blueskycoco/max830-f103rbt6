@@ -137,10 +137,10 @@ int main(void)
 {	
 	EXTI6_Config();
 	led_init();
-	delay_init(48);
+	delay_init(36);
 	Uart_Init();
 	Init_MAX7219();
-			uart_ctl(0);
+	uart_ctl(0);
 #ifdef DEBUG
 	printf("float system on\r\n");
 #endif
@@ -148,13 +148,13 @@ int main(void)
 	led(0);
 	lock_init();
 	ctl_7219(0);
-/*while(1) {
+#if 0
+while(1) {
 	led(0);
 	delay_ms(1000);
 	led(1);
 	delay_ms(1000);
-}*/
-#if 0
+}
 	handle_cmd(on, sizeof(on));
 	delay_ms(1000);
 		led(0);
