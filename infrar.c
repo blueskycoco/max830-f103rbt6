@@ -6,8 +6,8 @@
 #include "mymisc.h"
 #include "can.h"
 
-//#define ID_CODE						0x0000000a
-//#define FACT_TIME					0x00180622
+#define ADDR_SN						3
+#define ADDR_DATE					1
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
 #define CMD_REG_CODE				0x0000
@@ -26,6 +26,7 @@ extern void SWO_Enable(void);
 #define STATE_ASK_CC1101_ADDR		0
 #define STATE_PROTECT_ON			2
 #define STATE_UPDATE_INFO			1
+int timer_5s = 0;
 unsigned char g_cnt 				= 0;
 unsigned char g_state 				= STATE_ASK_CC1101_ADDR;
 unsigned char b_protection_state 	= 0;	/*protection state*/
@@ -33,6 +34,12 @@ unsigned char b_protection_state 	= 0;	/*protection state*/
 unsigned char last_sub_cmd 			= 0x00; 
 volatile unsigned char key 			= 0x0;
 unsigned char g_id 					= 0x01;
+int g_heart_cnt	= 0;
+
+void read_info(char addr, unsigned char *buf, char len)
+{
+		memcpy(buf, (const void *)(0x0800fff1+addr), len);
+}
 void int_init()
 {
 	EXTI_InitTypeDef   EXTI_InitStructure;
@@ -221,10 +228,12 @@ void handle_can_addr(uint8_t *id, uint8_t res)
 	cmd[ofs++] = CMD_REG_CODE & 0xff;
 	cmd[ofs++] = (DEVICE_MODE >> 8) & 0xff;
 	cmd[ofs++] = DEVICE_MODE & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
+	read_info(ADDR_SN, cmd+ofs, 4);
+	ofs += 4;
+	//cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
+	//cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
+	//cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
+	//cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
 	if (!can_send(0x01, cmd, ofs)) {
 		can_init();
 		g_state	= STATE_ASK_CC1101_ADDR;
@@ -245,10 +254,13 @@ void handle_can_info(uint8_t *id, uint8_t res)
 	cmd[ofs++] = CMD_INFO_CODE & 0xff;
 	cmd[ofs++] = g_id;
 	cmd[ofs++] = DEVICE_TYPE & 0xff;
-	cmd[ofs++] = ((long)FACT_TIME >> 24) & 0xff;
-	cmd[ofs++] = ((long)FACT_TIME >> 16) & 0xff;
-	cmd[ofs++] = ((long)FACT_TIME >> 8) & 0xff;
-	cmd[ofs++] = ((long)FACT_TIME >> 0) & 0xff;
+	ofs++;
+	read_info(ADDR_DATE, cmd+ofs, 3);
+	ofs += 3;
+	//cmd[ofs++] = ((long)FACT_TIME >> 24) & 0xff;
+	//cmd[ofs++] = ((long)FACT_TIME >> 16) & 0xff;
+	//cmd[ofs++] = ((long)FACT_TIME >> 8) & 0xff;
+	//cmd[ofs++] = ((long)FACT_TIME >> 0) & 0xff;
 	if (!can_send(0x01, cmd, ofs)) {
 		can_init();
 		g_state	= STATE_ASK_CC1101_ADDR;
@@ -269,10 +281,12 @@ void handle_can_cmd(uint16_t main_cmd, uint8_t sub_cmd)
 	cmd[ofs++] = main_cmd & 0xff;
 	cmd[ofs++] = g_id;
 	cmd[ofs++] = sub_cmd;
-	cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
-	cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
+	read_info(ADDR_SN, cmd+ofs, 4);
+	ofs += 4;
+	//cmd[ofs++] = ((long)ID_CODE >> 24) & 0xff;
+	//cmd[ofs++] = ((long)ID_CODE >> 16) & 0xff;
+	//cmd[ofs++] = ((long)ID_CODE >> 8) & 0xff;
+	//cmd[ofs++] = ((long)ID_CODE >> 0) & 0xff;
 
 	if (main_cmd == CMD_ALARM) {
 		if (sub_cmd == 0x01)
@@ -318,12 +332,15 @@ void handle_can_resp()
 	int result = can_read(resp, &len);
 	if (result !=0 && len > 0) {
 		uint32_t id = resp[4];
+		uint8_t ids[4];
 		id = (id << 8) + resp[5];
 		id = (id << 8) + resp[6];
 		id = (id << 8) + resp[7];
-		if (ID_CODE !=id) {
-			printf("id %08x is not correct %08x\r\n", 
-					id, ID_CODE);
+		read_info(ADDR_SN, ids, 4);
+		
+		if (memcmp(ids, resp, 4) !=0) {
+			printf("id %08x is not correct \r\n", 
+					id);
 			return ;
 		}
 		printf("<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\r\n");
@@ -421,6 +438,12 @@ void handle_timer()
 		}
 
 	}
+
+	g_heart_cnt++;
+	if (g_heart_cnt >= 24) {
+		handle_can_cmd(CMD_CUR_STATUS,0x01);
+		g_heart_cnt = 0;
+	}
 }
 void CAN1_RX0_IRQHandler(void)
 {
@@ -449,7 +472,6 @@ void task()
 	while (1) {
 		//key = 0;
 		//PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-		//led(1);
 		//SYSCLKConfig_STOP();		
 		//delay_ms(10);
 		if (key != 0) {
@@ -469,7 +491,11 @@ void task()
 			key &= ~KEY_INFRAR;
 			printf("infrar pressed\r\n");
 			if (b_protection_state)
+			{
+				led(1);
 				handle_can_cmd(CMD_ALARM, 0x01);
+				delay_ms(1000);
+			}
 		}
 
 //		if (key & KEY_CAN) {
