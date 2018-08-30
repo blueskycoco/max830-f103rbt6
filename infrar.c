@@ -6,8 +6,8 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ADDR_SN						3
-#define ADDR_DATE					1
+#define ADDR_SN						5
+#define ADDR_DATE					2
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
 #define CMD_REG_CODE				0x0000
@@ -38,7 +38,7 @@ int g_heart_cnt	= 0;
 
 void read_info(char addr, unsigned char *buf, char len)
 {
-		memcpy(buf, (const void *)(0x0800fff1+addr), len);
+		memcpy(buf, (const void *)(0x0800fff0+addr), len);
 }
 void int_init()
 {
@@ -338,9 +338,9 @@ void handle_can_resp()
 		id = (id << 8) + resp[7];
 		read_info(ADDR_SN, ids, 4);
 		
-		if (memcmp(ids, resp, 4) !=0) {
-			printf("id %08x is not correct \r\n", 
-					id);
+		if (memcmp(ids, resp+4, 4) !=0) {
+			printf("id %08x is not correct %02x%02x%02x%02x\r\n", 
+					id,ids[0],ids[1],ids[2],ids[3]);
 			return ;
 		}
 		printf("<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\r\n");
