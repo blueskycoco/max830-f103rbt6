@@ -6,8 +6,8 @@
 #include "mymisc.h"
 #include "can.h"
 
-#define ADDR_SN						5
-#define ADDR_DATE					2
+#define ADDR_SN						4
+#define ADDR_DATE					1
 extern void SWO_Enable(void);
 #define DEVICE_MODE					0xD211
 #define CMD_REG_CODE				0x0000
@@ -341,6 +341,11 @@ void handle_can_resp()
 		if (memcmp(ids, resp+4, 4) !=0) {
 			printf("id %08x is not correct %02x%02x%02x%02x\r\n", 
 					id,ids[0],ids[1],ids[2],ids[3]);
+			if (g_state == STATE_UPDATE_INFO)
+			{
+				g_state = STATE_ASK_CC1101_ADDR; 
+				set_id(0x02);	
+			}
 			return ;
 		}
 		printf("<$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\r\n");
@@ -507,8 +512,8 @@ void task()
 		//delay_ms(30);
 		led(0);
 
-		if (!b_protection_state || last_sub_cmd !=0 || 
-				g_state != STATE_PROTECT_ON)
+//		if (!b_protection_state || last_sub_cmd !=0 || 
+//				g_state != STATE_PROTECT_ON)
 		{
 			printf("%d %d %d %02x\r\n",b_protection_state,last_sub_cmd,g_state,key);
 			reconfig_rtc(5);
