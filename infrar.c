@@ -337,7 +337,7 @@ void handle_can_resp()
 		id = (id << 8) + resp[6];
 		id = (id << 8) + resp[7];
 		read_info(ADDR_SN, ids, 4);
-		
+		printf("ids %x %x %x %x\r\n", ids[0], ids[1], ids[2], ids[3]);	
 		if (memcmp(ids, resp+4, 4) !=0) {
 			printf("id %08x is not correct %02x%02x%02x%02x\r\n", 
 					id,ids[0],ids[1],ids[2],ids[3]);
