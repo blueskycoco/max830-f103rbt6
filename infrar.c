@@ -516,7 +516,7 @@ void task()
 //				g_state != STATE_PROTECT_ON)
 		{
 			printf("%d %d %d %02x\r\n",b_protection_state,last_sub_cmd,g_state,key);
-			reconfig_rtc(5);
+			reconfig_rtc(1);
 		}
 		} else 
 			delay_ms(100);

@@ -148,7 +148,7 @@ void can_init()
 	CAN_InitStructure.CAN_SJW = CAN_SJW_1tq;
 	CAN_InitStructure.CAN_BS1 = CAN_BS1_3tq;
 	CAN_InitStructure.CAN_BS2 = CAN_BS2_5tq;
-	CAN_InitStructure.CAN_Prescaler = 4;
+	CAN_InitStructure.CAN_Prescaler = 64;
 	CAN_Init(CANx, &CAN_InitStructure);
 
 	CAN_FilterInitStructure.CAN_FilterNumber = 0;
