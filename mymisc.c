@@ -4,6 +4,13 @@
 #include <stm32f10x.h>
 #include "mymisc.h"
 USART_InitTypeDef USART_InitStructure;
+const unsigned short crc_table[] = {
+	0x0000, 0xcc01, 0xd801, 0x1400,
+	0xf001, 0x3c00, 0x2800, 0xe401,
+	0xa001, 0x6c00, 0x7800, 0xb401,
+	0x5000, 0x9c01, 0x8801, 0x4400
+};
+
 static const uint16_t crc16tab[256]= {
 	0x0000,0x1021,0x2042,0x3063,0x4084,0x50a5,0x60c6,0x70e7,
 	0x8108,0x9129,0xa14a,0xb16b,0xc18c,0xd1ad,0xe1ce,0xf1ef,
@@ -107,6 +114,7 @@ void rs485_send(unsigned char *cmd, unsigned short len)
 		USART_SendData(USART3, cmd[i]);
 		while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET); 
 	}
+	delay_ms(10);
 	GPIO_ResetBits(GPIOB,GPIO_Pin_0);		
 	GPIO_ResetBits(GPIOB,GPIO_Pin_1);
 }
@@ -171,8 +179,21 @@ void led(int on)
 	}
 }
 
+uint16_t crc16(const unsigned char* pmsg,
+		int len) {
+	unsigned short	crc		= 0xffff;
+	unsigned char	i;
+	unsigned char	temp;
 
-uint16_t crc16(const unsigned char *buf, int len) {
+	for(i = 0; i < len; i++) {
+		temp = *pmsg++;
+		crc	 =  crc_table[(temp ^ crc) & 15] ^ (crc >> 4);
+		crc	 =  crc_table[((temp >> 4) ^ crc) & 15] ^ (crc >> 4);
+	}
+
+	return crc;
+}
+uint16_t crc16_xmodem(const unsigned char *buf, int len) {
 	int counter;
 	uint16_t crc = 0;
 	for (counter = 0; counter < len; counter++)
