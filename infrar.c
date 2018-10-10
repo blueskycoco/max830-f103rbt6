@@ -445,7 +445,7 @@ void handle_timer()
 	}
 
 	g_heart_cnt++;
-	if (g_heart_cnt >= 24) {
+	if (g_heart_cnt >= 48) {
 		handle_can_cmd(CMD_CUR_STATUS,0x01);
 		g_heart_cnt = 0;
 	}
