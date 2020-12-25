@@ -110,6 +110,7 @@ ${COMPILER}/key.axf: ${COMPILER}/usb_bsp.o
 ${COMPILER}/key.axf: ${COMPILER}/usbd_desc.o
 ${COMPILER}/key.axf: ${COMPILER}/usbd_pwr.o
 ${COMPILER}/key.axf: ${COMPILER}/usbd_usr.o
+${COMPILER}/key.axf: ${COMPILER}/stm32_it.o
 ${COMPILER}/key.axf: key.ld
 SCATTERgcc_key=key.ld
 ENTRY_key=Reset_Handler
