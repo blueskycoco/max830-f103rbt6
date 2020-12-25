@@ -35,7 +35,9 @@ int main(void)
 	while(1) {
 		led(0);
 		delay_ms(1000);
+		nprintf("led off\r\n");
 		led(1);
 		delay_ms(1000);
+		nprintf("led on\r\n");
 	}
 }

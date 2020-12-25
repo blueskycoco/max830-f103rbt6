@@ -39,14 +39,14 @@ void delay_us(unsigned long Nus)
 } 
 void PutChar(char ptr)
 {   
-	USART_SendData(USART1, ptr);
-	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET); 
+	USART_SendData(USART2, ptr);
+	while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET); 
 }
 int8_t GetChar(void)
 {
 	int8_t ch = -1;
-	if (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == SET)
-		ch = USART_ReceiveData(USART1) & 0xff;
+	if (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == SET)
+		ch = USART_ReceiveData(USART2) & 0xff;
 	return ch;
 }
 void Uart_Init()
@@ -54,7 +54,7 @@ void Uart_Init()
 	GPIO_InitTypeDef GPIO_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_1);
 	GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_1);
 
@@ -72,7 +72,7 @@ void Uart_Init()
 	USART_InitStructure.USART_HardwareFlowControl = 
 		USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-	USART_Init(USART1, &USART_InitStructure);
+	USART_Init(USART2, &USART_InitStructure);
 
 	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPriority = 0x00;
@@ -80,9 +80,9 @@ void Uart_Init()
 	NVIC_Init(&NVIC_InitStructure);
 	USART_SetReceiverTimeOut(USART1, 115200/4);
 	USART_ReceiverTimeOutCmd(USART1, ENABLE);
-	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-	USART_ITConfig(USART1, USART_IT_RTO, ENABLE);
-	USART_Cmd(USART1, ENABLE);
+	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+	USART_ITConfig(USART2, USART_IT_RTO, ENABLE);
+	USART_Cmd(USART2, ENABLE);
 }
 void led_init()
 {
@@ -211,7 +211,7 @@ static int check_status(uint8_t bit)
 	{
 		i++;
 		if(i==100){
-			printf("send timeout\r\n");
+			nprintf("send timeout\r\n");
 			return 0;
 		}
 		delay_us(1);
@@ -221,7 +221,7 @@ static int check_status(uint8_t bit)
 	{
 		i++;
 		if(i==100){
-			printf("send 2 timeout\r\n");
+			nprintf("send 2 timeout\r\n");
 			return 0;
 		}
 		delay_us(1);
@@ -277,12 +277,12 @@ void set7219(uint8_t x, uint8_t y, uint8_t on)
 		cmd[i] = cur[(i-1)/2][tmp_x];
 #ifdef DEBUG
 	uint8_t j;
-	printf("cmd %02x %02x %02x %02x %02x %02x %02x %02x\r\ncur:\r\n",
+	nprintf("cmd %02x %02x %02x %02x %02x %02x %02x %02x\r\ncur:\r\n",
 			cmd[0],cmd[1],cmd[2],cmd[3],cmd[4],cmd[5],cmd[6],cmd[7]);
 	for (i=0; i<4; i++) {
 		for (j=0; j<8; j++)
-			printf("%02x ", cur[i][j]);
-		printf("\r\n");
+			nprintf("%02x ", cur[i][j]);
+		nprintf("\r\n");
 	}
 #endif
 	spi_send(cmd,8);
