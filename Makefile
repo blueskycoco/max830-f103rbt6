@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-# Makefile - Rules for building the float example.
+# Makefile - Rules for building the key example.
 #
 # Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 # Software License Agreement
@@ -36,12 +36,12 @@ include ${ROOT}/makedefs
 # Where to find header files that do not live in the source directory.
 #
 IPATH=./inc
-
+VPATH=./src
 #
-# The default rule, which causes the float example to be built.
+# The default rule, which causes the key example to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/float.axf
+all: ${COMPILER}/key.axf
 
 #
 # The rule to clean out all the build products.
@@ -58,17 +58,17 @@ ${COMPILER}:
 	@mkdir -p ${COMPILER}
 
 #
-# Rules for building the float example.
+# Rules for building the key example.
 #
-${COMPILER}/float.axf: ${COMPILER}/startup_${COMPILER}_030f4p6.o
-${COMPILER}/float.axf: ${COMPILER}/system_stm32f0xx.o
-${COMPILER}/float.axf: ${COMPILER}/float.o
-${COMPILER}/float.axf: ${COMPILER}/syscalls.o
-${COMPILER}/float.axf: ${COMPILER}/mymisc.o
-${COMPILER}/float.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
-${COMPILER}/float.axf: float.ld
-SCATTERgcc_float=float.ld
-ENTRY_float=Reset_Handler
+${COMPILER}/key.axf: ${COMPILER}/startup_${COMPILER}_030f4p6.o
+${COMPILER}/key.axf: ${COMPILER}/system_stm32f0xx.o
+${COMPILER}/key.axf: ${COMPILER}/key.o
+${COMPILER}/key.axf: ${COMPILER}/syscalls.o
+${COMPILER}/key.axf: ${COMPILER}/mymisc.o
+${COMPILER}/key.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
+${COMPILER}/key.axf: key.ld
+SCATTERgcc_key=key.ld
+ENTRY_key=Reset_Handler
 #CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DMASTER
 CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F030
 CFLAGSgcc+=-DDEBUG

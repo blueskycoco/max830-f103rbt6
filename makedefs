@@ -126,8 +126,8 @@ LIBGCC:=${shell ${CC} ${CFLAGS} -print-libgcc-file-name}
 #
 # Get the location of libc.a from the GCC front-end.
 #
-#LIBC:=${shell ${CC} ${CFLAGS} -print-file-name=libc.a}
-LIBC:= newlibc/arm-none-eabi/lib/armv6-m/libc.a
+LIBC:=${shell ${CC} ${CFLAGS} -print-file-name=libc.a}
+#LIBC:= newlibc/arm-none-eabi/lib/armv6-m/libc.a
 #
 # Get the location of libm.a from the GCC front-end.
 #

@@ -1,8 +1,0 @@
-r
-h
-speed 1200
-exec device=stm32f103c8
-loadbin gcc\infrar.bin 0x08000000
-r
-g
-qc
