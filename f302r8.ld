@@ -102,6 +102,18 @@ SECTIONS
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
+  .rti_array :
+  {
+    PROVIDE_HIDDEN (__rti_array_start = .);
+    KEEP (*(SORT(.rti_fn*)))
+    PROVIDE_HIDDEN (__rti_array_end = .);
+    PROVIDE_HIDDEN (__fsymtab_start = .);
+    KEEP (*(FSymTab))
+    PROVIDE_HIDDEN (__fsymtab_end = .);
+    PROVIDE_HIDDEN (__vsymtab_start = .);
+    KEEP (*(VSymTab))
+    PROVIDE_HIDDEN (__vsymtab_end = .);
+  } >FLASH
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);

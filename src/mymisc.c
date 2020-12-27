@@ -1,50 +1,61 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <rthw.h>
+#include <rtthread.h>
 #include <stm32f30x.h>
 #include <string.h>
 #include "mymisc.h"
-static unsigned char  fac_us=0;
-static unsigned short fac_ms=0;
-void delay_init(unsigned char SYSCLK)
-{
-	SysTick->VAL=0X00000000;
-	SysTick->CTRL&=0xfffffffb;
-	fac_us=SYSCLK/8;      
-	fac_ms=(unsigned short)fac_us*1000;
-	SysTick->CTRL&=0XFFFFFFFE;
-	SysTick->VAL=0X00000000;
+extern void SystemCoreClockUpdate(void);
 
-}            
-void delay_ms(unsigned short nms)
-{    
-	SysTick->LOAD=(unsigned long)nms*fac_ms;
-	SysTick->CTRL|=0x01;
-	while(!(SysTick->CTRL&(1<<16)));
-	SysTick->CTRL&=0XFFFFFFFE;
-	SysTick->VAL=0X00000000; 
-}   
-void delay_us(unsigned long Nus)
-{ 
-	SysTick->LOAD=Nus*fac_us;
-	SysTick->CTRL|=0x01;
-	while(!(SysTick->CTRL&(1<<16)));
-	SysTick->CTRL=0X00000000;
-	SysTick->VAL=0X00000000;
-} 
-void PutChar(char ptr)
-{   
-	USART_SendData(USART2, ptr);
-	while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET); 
-}
-int8_t GetChar(void)
+extern uint32_t SystemCoreClock;
+
+#if defined(RT_USING_USER_MAIN) && defined(RT_USING_HEAP)
+#define RT_HEAP_SIZE 1024
+static uint32_t rt_heap[RT_HEAP_SIZE];
+RT_WEAK void *rt_heap_begin_get(void)
 {
-	int8_t ch = -1;
-	if (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == SET)
-		ch = USART_ReceiveData(USART2) & 0xff;
-	return ch;
+	return rt_heap;
 }
-void Uart_Init()
+
+RT_WEAK void *rt_heap_end_get(void)
+{
+	return rt_heap + RT_HEAP_SIZE;
+}
+#endif
+
+/**
+ *  * This function will initial your board.
+ *   */
+void rt_hw_board_init()
+{
+	/* System Clock Update */
+	SystemCoreClockUpdate();
+
+	/* System Tick Configuration */
+	SysTick_Config(SystemCoreClock / RT_TICK_PER_SECOND);
+
+	/* Call components board initial (use INIT_BOARD_EXPORT()) */
+#ifdef RT_USING_COMPONENTS_INIT
+	rt_components_board_init();
+#endif
+
+#if defined(RT_USING_USER_MAIN) && defined(RT_USING_HEAP)
+	rt_system_heap_init(rt_heap_begin_get(), rt_heap_end_get());
+#endif
+}
+
+void SysTick_Handler(void)
+{
+	/* enter interrupt */
+	rt_interrupt_enter();
+
+	rt_tick_increase();
+
+	/* leave interrupt */
+	rt_interrupt_leave();
+}
+static int Uart_Init(void)
 {
 	USART_InitTypeDef USART_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
@@ -75,6 +86,34 @@ void Uart_Init()
 	USART_ITConfig(USART2, USART_IT_RTO, ENABLE);
 	USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 	USART_Cmd(USART2, ENABLE);
+	return 0;
+}
+INIT_BOARD_EXPORT(Uart_Init);
+
+void rt_hw_console_output(const char *str)
+{   
+	rt_size_t i = 0, size = 0;
+	char a = '\r';
+
+	size = rt_strlen(str);
+	for (i = 0; i < size; i++)
+	{
+		if (*(str + i) == '\n')
+		{
+			USART_SendData(USART2, a);
+			while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET); 
+		}
+		USART_SendData(USART2, *(uint8_t *)(str + i));
+		while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET); 
+	}
+}
+
+char rt_hw_console_getchar(void)
+{
+	int8_t ch = -1;
+	if (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) == SET)
+		ch = USART_ReceiveData(USART2) & 0xff;
+	return ch;
 }
 void led_init()
 {

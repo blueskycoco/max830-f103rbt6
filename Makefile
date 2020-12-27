@@ -39,10 +39,22 @@ IPATH = ./inc
 IPATH += ./driverlib/STM32F30x_StdPeriph_Driver/inc
 IPATH += ./driverlib/CMSIS/Include
 IPATH += ./driverlib/CMSIS/Device/ST/STM32F30x/Include
+IPATH += ./src/draw
+IPATH += ./src/draw/tslib
+
+IPATH += ./rt-thread/include
+IPATH += ./rt-thread/components/finsh
 
 VPATH=./src
 VPATH += ./driverlib/STM32F30x_StdPeriph_Driver/src
 VPATH += ./driverlib/CMSIS/Device/ST/STM32F30x/Source/Templates/gcc_ride7
+VPATH += ./src/draw
+VPATH += ./src/draw/tslib
+
+VPATH += ./rt-thread/src
+VPATH += ./rt-thread/components/finsh
+VPATH += ./rt-thread/libcpu/arm/cortex-m4
+
 #
 # The default rule, which causes the f302r8 example to be built.
 #
@@ -70,8 +82,13 @@ ${COMPILER}/f302r8.axf: ${COMPILER}/startup_stm32f30x.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/system_stm32f30x.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/main.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_it.o
-${COMPILER}/f302r8.axf: ${COMPILER}/syscalls.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/mymisc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/ads7843.o
+${COMPILER}/f302r8.axf: ${COMPILER}/font_8x8.o
+${COMPILER}/f302r8.axf: ${COMPILER}/ili9325.o
+${COMPILER}/f302r8.axf: ${COMPILER}/tslib.o
+${COMPILER}/f302r8.axf: ${COMPILER}/testutils.o
+${COMPILER}/f302r8.axf: ${COMPILER}/ts_calibrate.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_adc.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_can.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_comp.o
@@ -96,6 +113,26 @@ ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_syscfg.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_tim.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_usart.o
 ${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_wwdg.o
+#rtthread
+${COMPILER}/f302r8.axf: ${COMPILER}/clock.o
+${COMPILER}/f302r8.axf: ${COMPILER}/components.o
+${COMPILER}/f302r8.axf: ${COMPILER}/context_gcc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/cpuport.o
+${COMPILER}/f302r8.axf: ${COMPILER}/idle.o
+${COMPILER}/f302r8.axf: ${COMPILER}/ipc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/irq.o
+${COMPILER}/f302r8.axf: ${COMPILER}/kservice.o
+${COMPILER}/f302r8.axf: ${COMPILER}/mem.o
+${COMPILER}/f302r8.axf: ${COMPILER}/memheap.o
+${COMPILER}/f302r8.axf: ${COMPILER}/mempool.o
+${COMPILER}/f302r8.axf: ${COMPILER}/object.o
+${COMPILER}/f302r8.axf: ${COMPILER}/scheduler.o
+${COMPILER}/f302r8.axf: ${COMPILER}/thread.o
+${COMPILER}/f302r8.axf: ${COMPILER}/timer.o
+${COMPILER}/f302r8.axf: ${COMPILER}/cmd.o
+${COMPILER}/f302r8.axf: ${COMPILER}/msh.o
+${COMPILER}/f302r8.axf: ${COMPILER}/shell.o
+
 ${COMPILER}/f302r8.axf: f302r8.ld
 SCATTERgcc_f302r8=f302r8.ld
 ENTRY_f302r8=Reset_Handler
