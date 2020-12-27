@@ -48,11 +48,10 @@ void Uart_Init()
 {
 	USART_InitTypeDef USART_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
-	NVIC_InitTypeDef NVIC_InitStructure;
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_1);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_1);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_7);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_7);
 
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -70,14 +69,11 @@ void Uart_Init()
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 	USART_Init(USART2, &USART_InitStructure);
 
-	NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x00;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
 	USART_SetReceiverTimeOut(USART2, 115200/4);
 	USART_ReceiverTimeOutCmd(USART2, ENABLE);
 	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 	USART_ITConfig(USART2, USART_IT_RTO, ENABLE);
+	USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 	USART_Cmd(USART2, ENABLE);
 }
 void led_init()

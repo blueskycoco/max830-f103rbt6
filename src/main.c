@@ -10,15 +10,15 @@ int main(void)
 {	
 	delay_init(72);
 	led_init();
-//	Uart_Init();
-//	nprintf("float system on\r\n");
+	Uart_Init();
+	nprintf("float system on\r\n");
 	while(1) {
 		led(0);
 		delay_ms(1000);
-//		nprintf("led off\r\n");
+		nprintf("led off\r\n");
 		led(1);
 		delay_ms(1000);
-//		nprintf("led on\r\n");
+		nprintf("led on\r\n");
 	}
 	return 0;
 } 
