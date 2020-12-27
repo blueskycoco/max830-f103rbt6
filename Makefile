@@ -1,6 +1,6 @@
 #******************************************************************************
 #
-# Makefile - Rules for building the key example.
+# Makefile - Rules for building the f302r8 example.
 #
 # Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 # Software License Agreement
@@ -36,23 +36,18 @@ include ${ROOT}/makedefs
 # Where to find header files that do not live in the source directory.
 #
 IPATH = ./inc
-IPATH += ./driverlib/STM32F0xx_StdPeriph_Driver/inc
-IPATH += ./driverlib/STM32_USB_Device_Library/Class/hid/inc
-IPATH += ./driverlib/STM32_USB_Device_Library/Core/inc
-IPATH += ./driverlib/STM32_USB_Device_Driver/inc
+IPATH += ./driverlib/STM32F30x_StdPeriph_Driver/inc
 IPATH += ./driverlib/CMSIS/Include
-IPATH += ./driverlib/CMSIS/Device/ST/STM32F0xx/Include
+IPATH += ./driverlib/CMSIS/Device/ST/STM32F30x/Include
 
 VPATH=./src
-VPATH += ./driverlib/STM32_USB_Device_Driver/src
-VPATH += ./driverlib/STM32_USB_Device_Library/Class/hid/src
-VPATH += ./driverlib/STM32_USB_Device_Library/Core/src
-VPATH += ./driverlib/STM32F0xx_StdPeriph_Driver/src
+VPATH += ./driverlib/STM32F30x_StdPeriph_Driver/src
+VPATH += ./driverlib/CMSIS/Device/ST/STM32F30x/Source/Templates/gcc_ride7
 #
-# The default rule, which causes the key example to be built.
+# The default rule, which causes the f302r8 example to be built.
 #
 all: ${COMPILER}
-all: ${COMPILER}/key.axf
+all: ${COMPILER}/f302r8.axf
 
 #
 # The rule to clean out all the build products.
@@ -69,54 +64,43 @@ ${COMPILER}:
 	@mkdir -p ${COMPILER}
 
 #
-# Rules for building the key example.
+# Rules for building the f302r8 example.
 #
-${COMPILER}/key.axf: ${COMPILER}/startup_${COMPILER}_042f4p6.o
-${COMPILER}/key.axf: ${COMPILER}/system_stm32f0xx.o
-${COMPILER}/key.axf: ${COMPILER}/key.o
-${COMPILER}/key.axf: ${COMPILER}/syscalls.o
-${COMPILER}/key.axf: ${COMPILER}/mymisc.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_adc.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_can.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_cec.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_comp.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_crc.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_crs.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_dac.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_dbgmcu.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_dma.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_exti.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_flash.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_gpio.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_i2c.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_iwdg.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_misc.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_pwr.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_rcc.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_rtc.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_spi.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_syscfg.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_tim.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_usart.o
-${COMPILER}/key.axf: ${COMPILER}/stm32f0xx_wwdg.o
-${COMPILER}/key.axf: ${COMPILER}/usb_core.o
-${COMPILER}/key.axf: ${COMPILER}/usb_dcd.o
-${COMPILER}/key.axf: ${COMPILER}/usb_dcd_int.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_custom_hid_core.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_core.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_ioreq.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_req.o
-${COMPILER}/key.axf: ${COMPILER}/usb_bsp.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_desc.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_pwr.o
-${COMPILER}/key.axf: ${COMPILER}/usbd_usr.o
-${COMPILER}/key.axf: ${COMPILER}/stm32_it.o
-${COMPILER}/key.axf: key.ld
-SCATTERgcc_key=key.ld
-ENTRY_key=Reset_Handler
-#CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DMASTER
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F042
-CFLAGSgcc+=-DDEBUG
+${COMPILER}/f302r8.axf: ${COMPILER}/startup_stm32f30x.o
+${COMPILER}/f302r8.axf: ${COMPILER}/system_stm32f30x.o
+${COMPILER}/f302r8.axf: ${COMPILER}/main.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_it.o
+${COMPILER}/f302r8.axf: ${COMPILER}/syscalls.o
+${COMPILER}/f302r8.axf: ${COMPILER}/mymisc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_adc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_can.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_comp.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_crc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_dac.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_dbgmcu.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_dma.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_exti.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_flash.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_fmc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_gpio.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_hrtim.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_i2c.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_iwdg.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_misc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_opamp.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_pwr.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_rcc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_rtc.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_spi.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_syscfg.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_tim.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_usart.o
+${COMPILER}/f302r8.axf: ${COMPILER}/stm32f30x_wwdg.o
+${COMPILER}/f302r8.axf: f302r8.ld
+SCATTERgcc_f302r8=f302r8.ld
+ENTRY_f302r8=Reset_Handler
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F302x8
+CFLAGSgcc+=-DDEBUG -D__FPU_PRESENT -D__VFP_FP__
 #
 # Include the automatically generated dependency files.
 #
